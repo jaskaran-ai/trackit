@@ -85,6 +85,7 @@ model Submission {
   description String           @db.Text
   status      SubmissionStatus @default(OPEN)
   priority    Priority         @default(MEDIUM)
+  project     Project          @default(OTHER)
   userId      String
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
@@ -117,8 +118,17 @@ enum SubmissionType {
 enum SubmissionStatus {
   OPEN
   IN_PROGRESS
-  RESOLVED
-  CLOSED
+  REVIEW
+  COMPLETE
+  CANCELED
+}
+
+enum Project {
+  IVALT_MOBILE
+  DOCU_ID
+  ONDEMAND_ID
+  KEYCLOCK
+  OTHER
 }
 
 enum Priority {
