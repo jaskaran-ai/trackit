@@ -13,6 +13,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@tiptap/extension-code-block": "^3.22.5",
     "@tiptap/extension-link": "^3.22.5",
@@ -25,6 +26,7 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^1.14.0",
     "next": "16.2.4",
+    "pg": "^8.20.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-dropzone": "^15.0.0",
@@ -35,9 +37,11 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.4",
     "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.5.0",
+    "dotenv": "^17.4.2",
     "eslint": "^10.3.0",
     "eslint-config-next": "16.2.4",
     "postcss": "^8.5.14",
