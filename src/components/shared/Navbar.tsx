@@ -111,7 +111,7 @@ export default function Navbar() {
                     </div>
 
                     <button
-                      onClick={() => signOut({ fetchOptions: { onSuccess: () => window.location.href = "/auth/signin" } })}
+                      onClick={() => signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/auth/signin"; } } })}
                       className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-zinc-400 hover:text-red-400 hover:bg-zinc-800 transition-colors"
                     >
                       <LogOut size={14} />
