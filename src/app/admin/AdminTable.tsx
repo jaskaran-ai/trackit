@@ -2,11 +2,11 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { StatusBadge, TypeBadge, PriorityBadge } from "@/components/shared/Badges";
-import { formatDate } from "@/lib/utils";
+import { StatusBadge, TypeBadge, PriorityBadge, ProjectBadge } from "@/components/shared/Badges";
+import { formatDate, PROJECT_LABELS } from "@/lib/utils";
 import { Search, Paperclip, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import type { SubmissionWithUser } from "@/types";
-import type { SubmissionStatus, SubmissionType, Priority } from "@prisma/client";
+import type { SubmissionStatus, SubmissionType, Priority, Project } from "@/generated/prisma/client/enums";
 
 type SortKey = "createdAt" | "status" | "type" | "priority" | "title";
 type SortDir = "asc" | "desc";
@@ -16,6 +16,7 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
   const [filterType, setFilterType] = useState<SubmissionType | "ALL">("ALL");
   const [filterStatus, setFilterStatus] = useState<SubmissionStatus | "ALL">("ALL");
   const [filterPriority, setFilterPriority] = useState<Priority | "ALL">("ALL");
+  const [filterProject, setFilterProject] = useState<Project | "ALL">("ALL");
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: "createdAt",
     dir: "desc",
@@ -27,6 +28,7 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
         if (filterType !== "ALL" && s.type !== filterType) return false;
         if (filterStatus !== "ALL" && s.status !== filterStatus) return false;
         if (filterPriority !== "ALL" && s.priority !== filterPriority) return false;
+        if (filterProject !== "ALL" && s.project !== filterProject) return false;
         if (
           search &&
           !s.title.toLowerCase().includes(search.toLowerCase()) &&
@@ -43,7 +45,7 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
         }
         return dir * String(a[sort.key]).localeCompare(String(b[sort.key]));
       });
-  }, [submissions, search, filterType, filterStatus, filterPriority, sort]);
+  }, [submissions, search, filterType, filterStatus, filterPriority, filterProject, sort]);
 
   const toggleSort = (key: SortKey) => {
     setSort((prev) =>
@@ -84,21 +86,31 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
               value: filterType,
               onChange: setFilterType,
               options: ["ALL", "BUG", "FEATURE"],
+              display: (o: string) => o === "ALL" ? "All Types" : o,
             },
             {
               label: "Status",
               value: filterStatus,
               onChange: setFilterStatus,
-              options: ["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"],
+              options: ["ALL", "OPEN", "IN_PROGRESS", "REVIEW", "COMPLETE", "CANCELED"],
+              display: (o: string) => o === "ALL" ? "All Statuses" : o.replace("_", " "),
             },
             {
               label: "Priority",
               value: filterPriority,
               onChange: setFilterPriority,
               options: ["ALL", "LOW", "MEDIUM", "HIGH", "CRITICAL"],
+              display: (o: string) => o === "ALL" ? "All Priorities" : o,
+            },
+            {
+              label: "Project",
+              value: filterProject,
+              onChange: setFilterProject,
+              options: ["ALL", "IVALT_MOBILE", "DOCU_ID", "ONDEMAND_ID", "KEYCLOCK", "OTHER"],
+              display: (o: string) => o === "ALL" ? "All Projects" : (PROJECT_LABELS[o] ?? o),
             },
           ] as const
-        ).map(({ label, value, onChange, options }) => (
+        ).map(({ label, value, onChange, options, display }) => (
           <select
             key={label}
             value={value}
@@ -107,7 +119,7 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
           >
             {options.map((o) => (
               <option key={o} value={o}>
-                {o === "ALL" ? `All ${label}s` : o.replace("_", " ")}
+                {display(o)}
               </option>
             ))}
           </select>
@@ -143,6 +155,9 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
                 </th>
               ))}
               <th className="text-left text-xs font-500 text-zinc-500 px-4 py-2.5 whitespace-nowrap">
+                Project
+              </th>
+              <th className="text-left text-xs font-500 text-zinc-500 px-4 py-2.5 whitespace-nowrap">
                 Reporter
               </th>
               <th className="px-4 py-2.5 w-8" />
@@ -151,7 +166,7 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
           <tbody className="divide-y divide-zinc-800/60">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-zinc-600 text-sm">
+                <td colSpan={8} className="text-center py-12 text-zinc-600 text-sm">
                   No submissions match the current filters
                 </td>
               </tr>
@@ -180,6 +195,9 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-zinc-500">
                     {formatDate(s.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <ProjectBadge project={s.project} />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">

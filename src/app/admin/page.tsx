@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/shared/Navbar";
 import AdminTable from "./AdminTable";
+import KanbanBoard from "./KanbanBoard";
+import AdminViewToggle from "./AdminViewToggle";
 import { Bug, Sparkles, Users, Inbox } from "lucide-react";
 
 export default async function AdminPage() {
@@ -64,9 +66,12 @@ export default async function AdminPage() {
           ))}
         </div>
 
-        {/* Table */}
+        {/* View toggle + content */}
         <div className="animate-fade-up animate-fade-up-delay-2">
-          <AdminTable submissions={submissions as any} />
+          <AdminViewToggle
+            tableView={<AdminTable submissions={submissions as any} />}
+            kanbanView={<KanbanBoard submissions={submissions as any} />}
+          />
         </div>
       </main>
     </div>
