@@ -9,3 +9,4 @@ prisma/migrations/
 .DS_Store
 .commandcode/
 codedb.snapshot
+tsconfig.tsbuildinfo
