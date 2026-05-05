@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/shared/Navbar";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import FileUploadZone from "@/components/shared/FileUploadZone";
-import { Bug, Sparkles, ChevronLeft, Send } from "lucide-react";
+import { Bug, Sparkles, ChevronLeft, Send, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import Link from "next/link";
 
 type SubmissionType = "BUG" | "FEATURE";
 type Priority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+type Project = "IVALT_MOBILE" | "DOCU_ID" | "ONDEMAND_ID" | "KEYCLOCK" | "OTHER";
 
 interface UploadedFile {
   id: string;
@@ -31,6 +32,7 @@ export default function SubmitPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("MEDIUM");
+  const [project, setProject] = useState<Project>("OTHER");
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -55,6 +57,7 @@ export default function SubmitPage() {
           title: title.trim(),
           description,
           priority,
+          project,
           attachments: files.map((f) => f.uploaded!).filter(Boolean),
         }),
       });
@@ -78,6 +81,14 @@ export default function SubmitPage() {
     { value: "MEDIUM", label: "Medium", color: "text-blue-400" },
     { value: "HIGH", label: "High", color: "text-orange-400" },
     { value: "CRITICAL", label: "Critical", color: "text-red-400" },
+  ];
+
+  const projectOptions: { value: Project; label: string }[] = [
+    { value: "IVALT_MOBILE", label: "iVALT Mobile App" },
+    { value: "DOCU_ID", label: "DocuID" },
+    { value: "ONDEMAND_ID", label: "OndemandID" },
+    { value: "KEYCLOCK", label: "KeyClock" },
+    { value: "OTHER", label: "Other" },
   ];
 
   return (
@@ -165,6 +176,33 @@ export default function SubmitPage() {
                       priority === value
                         ? `bg-zinc-800 border-zinc-600 ${color}`
                         : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Project */}
+            <div>
+              <label className="block text-xs font-500 text-zinc-400 mb-2 uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1.5">
+                  <Layers size={12} />
+                  Project
+                </span>
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {projectOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setProject(value)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-500 border transition-all",
+                      project === value
+                        ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300"
+                        : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"
                     )}
                   >
                     {label}
