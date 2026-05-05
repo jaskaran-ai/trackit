@@ -9,13 +9,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [total, open, inProgress, resolved, closed, bugs, features, users] =
+  const [total, open, inProgress, review, complete, canceled, bugs, features, users] =
     await Promise.all([
       prisma.submission.count(),
       prisma.submission.count({ where: { status: "OPEN" } }),
       prisma.submission.count({ where: { status: "IN_PROGRESS" } }),
-      prisma.submission.count({ where: { status: "RESOLVED" } }),
-      prisma.submission.count({ where: { status: "CLOSED" } }),
+      prisma.submission.count({ where: { status: "REVIEW" } }),
+      prisma.submission.count({ where: { status: "COMPLETE" } }),
+      prisma.submission.count({ where: { status: "CANCELED" } }),
       prisma.submission.count({ where: { type: "BUG" } }),
       prisma.submission.count({ where: { type: "FEATURE" } }),
       prisma.user.count(),
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     total,
-    byStatus: { open, inProgress, resolved, closed },
+    byStatus: { open, inProgress, review, complete, canceled },
     byType: { bugs, features },
     users,
   });

@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { type, title, description, priority, attachments } = body;
+  const { type, title, description, priority, project, attachments } = body;
 
   if (!type || !title || !description) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       title,
       description,
       priority: priority ?? "MEDIUM",
+      project: project ?? "OTHER",
       userId: session.user.id,
       attachments: {
         create:
