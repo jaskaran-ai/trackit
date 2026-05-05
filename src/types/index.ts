@@ -1,4 +1,4 @@
-import type { Submission, Attachment, User } from "@prisma/client";
+import type { Submission, Attachment, User } from "@/generated/prisma/client/client";
 
 export type SubmissionWithUser = Submission & {
   user: Pick<User, "id" | "name" | "email" | "image">;
