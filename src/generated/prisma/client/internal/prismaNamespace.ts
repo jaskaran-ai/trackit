@@ -962,6 +962,7 @@ export const SubmissionScalarFieldEnum = {
   description: 'description',
   status: 'status',
   priority: 'priority',
+  project: 'project',
   userId: 'userId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -1087,6 +1088,20 @@ export type EnumPriorityFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
  * Reference to a field of type 'Priority[]'
  */
 export type ListEnumPriorityFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Priority[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Project'
+ */
+export type EnumProjectFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Project'>
+    
+
+
+/**
+ * Reference to a field of type 'Project[]'
+ */
+export type ListEnumProjectFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Project[]'>
     
 
 

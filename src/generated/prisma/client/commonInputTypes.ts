@@ -182,6 +182,13 @@ export type EnumPriorityFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumPriorityFilter<$PrismaModel> | $Enums.Priority
 }
 
+export type EnumProjectFilter<$PrismaModel = never> = {
+  equals?: $Enums.Project | Prisma.EnumProjectFieldRefInput<$PrismaModel>
+  in?: $Enums.Project[] | Prisma.ListEnumProjectFieldRefInput<$PrismaModel>
+  notIn?: $Enums.Project[] | Prisma.ListEnumProjectFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumProjectFilter<$PrismaModel> | $Enums.Project
+}
+
 export type EnumSubmissionTypeWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.SubmissionType | Prisma.EnumSubmissionTypeFieldRefInput<$PrismaModel>
   in?: $Enums.SubmissionType[] | Prisma.ListEnumSubmissionTypeFieldRefInput<$PrismaModel>
@@ -210,6 +217,16 @@ export type EnumPriorityWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPriorityFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPriorityFilter<$PrismaModel>
+}
+
+export type EnumProjectWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.Project | Prisma.EnumProjectFieldRefInput<$PrismaModel>
+  in?: $Enums.Project[] | Prisma.ListEnumProjectFieldRefInput<$PrismaModel>
+  notIn?: $Enums.Project[] | Prisma.ListEnumProjectFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumProjectWithAggregatesFilter<$PrismaModel> | $Enums.Project
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumProjectFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumProjectFilter<$PrismaModel>
 }
 
 export type IntFilter<$PrismaModel = never> = {
@@ -420,6 +437,13 @@ export type NestedEnumPriorityFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumPriorityFilter<$PrismaModel> | $Enums.Priority
 }
 
+export type NestedEnumProjectFilter<$PrismaModel = never> = {
+  equals?: $Enums.Project | Prisma.EnumProjectFieldRefInput<$PrismaModel>
+  in?: $Enums.Project[] | Prisma.ListEnumProjectFieldRefInput<$PrismaModel>
+  notIn?: $Enums.Project[] | Prisma.ListEnumProjectFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumProjectFilter<$PrismaModel> | $Enums.Project
+}
+
 export type NestedEnumSubmissionTypeWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.SubmissionType | Prisma.EnumSubmissionTypeFieldRefInput<$PrismaModel>
   in?: $Enums.SubmissionType[] | Prisma.ListEnumSubmissionTypeFieldRefInput<$PrismaModel>
@@ -448,6 +472,16 @@ export type NestedEnumPriorityWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPriorityFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPriorityFilter<$PrismaModel>
+}
+
+export type NestedEnumProjectWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.Project | Prisma.EnumProjectFieldRefInput<$PrismaModel>
+  in?: $Enums.Project[] | Prisma.ListEnumProjectFieldRefInput<$PrismaModel>
+  notIn?: $Enums.Project[] | Prisma.ListEnumProjectFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumProjectWithAggregatesFilter<$PrismaModel> | $Enums.Project
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumProjectFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumProjectFilter<$PrismaModel>
 }
 
 export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {

@@ -20,11 +20,23 @@ export type SubmissionType = (typeof SubmissionType)[keyof typeof SubmissionType
 export const SubmissionStatus = {
   OPEN: 'OPEN',
   IN_PROGRESS: 'IN_PROGRESS',
-  RESOLVED: 'RESOLVED',
-  CLOSED: 'CLOSED'
+  REVIEW: 'REVIEW',
+  COMPLETE: 'COMPLETE',
+  CANCELED: 'CANCELED'
 } as const
 
 export type SubmissionStatus = (typeof SubmissionStatus)[keyof typeof SubmissionStatus]
+
+
+export const Project = {
+  IVALT_MOBILE: 'IVALT_MOBILE',
+  DOCU_ID: 'DOCU_ID',
+  ONDEMAND_ID: 'ONDEMAND_ID',
+  KEYCLOCK: 'KEYCLOCK',
+  OTHER: 'OTHER'
+} as const
+
+export type Project = (typeof Project)[keyof typeof Project]
 
 
 export const Priority = {

@@ -31,6 +31,7 @@ export type SubmissionMinAggregateOutputType = {
   description: string | null
   status: $Enums.SubmissionStatus | null
   priority: $Enums.Priority | null
+  project: $Enums.Project | null
   userId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -43,6 +44,7 @@ export type SubmissionMaxAggregateOutputType = {
   description: string | null
   status: $Enums.SubmissionStatus | null
   priority: $Enums.Priority | null
+  project: $Enums.Project | null
   userId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -55,6 +57,7 @@ export type SubmissionCountAggregateOutputType = {
   description: number
   status: number
   priority: number
+  project: number
   userId: number
   createdAt: number
   updatedAt: number
@@ -69,6 +72,7 @@ export type SubmissionMinAggregateInputType = {
   description?: true
   status?: true
   priority?: true
+  project?: true
   userId?: true
   createdAt?: true
   updatedAt?: true
@@ -81,6 +85,7 @@ export type SubmissionMaxAggregateInputType = {
   description?: true
   status?: true
   priority?: true
+  project?: true
   userId?: true
   createdAt?: true
   updatedAt?: true
@@ -93,6 +98,7 @@ export type SubmissionCountAggregateInputType = {
   description?: true
   status?: true
   priority?: true
+  project?: true
   userId?: true
   createdAt?: true
   updatedAt?: true
@@ -178,6 +184,7 @@ export type SubmissionGroupByOutputType = {
   description: string
   status: $Enums.SubmissionStatus
   priority: $Enums.Priority
+  project: $Enums.Project
   userId: string
   createdAt: Date
   updatedAt: Date
@@ -211,6 +218,7 @@ export type SubmissionWhereInput = {
   description?: Prisma.StringFilter<"Submission"> | string
   status?: Prisma.EnumSubmissionStatusFilter<"Submission"> | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFilter<"Submission"> | $Enums.Priority
+  project?: Prisma.EnumProjectFilter<"Submission"> | $Enums.Project
   userId?: Prisma.StringFilter<"Submission"> | string
   createdAt?: Prisma.DateTimeFilter<"Submission"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Submission"> | Date | string
@@ -225,6 +233,7 @@ export type SubmissionOrderByWithRelationInput = {
   description?: Prisma.SortOrder
   status?: Prisma.SortOrder
   priority?: Prisma.SortOrder
+  project?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -242,6 +251,7 @@ export type SubmissionWhereUniqueInput = Prisma.AtLeast<{
   description?: Prisma.StringFilter<"Submission"> | string
   status?: Prisma.EnumSubmissionStatusFilter<"Submission"> | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFilter<"Submission"> | $Enums.Priority
+  project?: Prisma.EnumProjectFilter<"Submission"> | $Enums.Project
   userId?: Prisma.StringFilter<"Submission"> | string
   createdAt?: Prisma.DateTimeFilter<"Submission"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Submission"> | Date | string
@@ -256,6 +266,7 @@ export type SubmissionOrderByWithAggregationInput = {
   description?: Prisma.SortOrder
   status?: Prisma.SortOrder
   priority?: Prisma.SortOrder
+  project?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -274,6 +285,7 @@ export type SubmissionScalarWhereWithAggregatesInput = {
   description?: Prisma.StringWithAggregatesFilter<"Submission"> | string
   status?: Prisma.EnumSubmissionStatusWithAggregatesFilter<"Submission"> | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityWithAggregatesFilter<"Submission"> | $Enums.Priority
+  project?: Prisma.EnumProjectWithAggregatesFilter<"Submission"> | $Enums.Project
   userId?: Prisma.StringWithAggregatesFilter<"Submission"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Submission"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Submission"> | Date | string
@@ -286,6 +298,7 @@ export type SubmissionCreateInput = {
   description: string
   status?: $Enums.SubmissionStatus
   priority?: $Enums.Priority
+  project?: $Enums.Project
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutSubmissionsInput
@@ -299,6 +312,7 @@ export type SubmissionUncheckedCreateInput = {
   description: string
   status?: $Enums.SubmissionStatus
   priority?: $Enums.Priority
+  project?: $Enums.Project
   userId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -312,6 +326,7 @@ export type SubmissionUpdateInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  project?: Prisma.EnumProjectFieldUpdateOperationsInput | $Enums.Project
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutSubmissionsNestedInput
@@ -325,6 +340,7 @@ export type SubmissionUncheckedUpdateInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  project?: Prisma.EnumProjectFieldUpdateOperationsInput | $Enums.Project
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -338,6 +354,7 @@ export type SubmissionCreateManyInput = {
   description: string
   status?: $Enums.SubmissionStatus
   priority?: $Enums.Priority
+  project?: $Enums.Project
   userId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -350,6 +367,7 @@ export type SubmissionUpdateManyMutationInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  project?: Prisma.EnumProjectFieldUpdateOperationsInput | $Enums.Project
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -361,6 +379,7 @@ export type SubmissionUncheckedUpdateManyInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  project?: Prisma.EnumProjectFieldUpdateOperationsInput | $Enums.Project
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -383,6 +402,7 @@ export type SubmissionCountOrderByAggregateInput = {
   description?: Prisma.SortOrder
   status?: Prisma.SortOrder
   priority?: Prisma.SortOrder
+  project?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -395,6 +415,7 @@ export type SubmissionMaxOrderByAggregateInput = {
   description?: Prisma.SortOrder
   status?: Prisma.SortOrder
   priority?: Prisma.SortOrder
+  project?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -407,6 +428,7 @@ export type SubmissionMinOrderByAggregateInput = {
   description?: Prisma.SortOrder
   status?: Prisma.SortOrder
   priority?: Prisma.SortOrder
+  project?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -471,6 +493,10 @@ export type EnumPriorityFieldUpdateOperationsInput = {
   set?: $Enums.Priority
 }
 
+export type EnumProjectFieldUpdateOperationsInput = {
+  set?: $Enums.Project
+}
+
 export type SubmissionCreateNestedOneWithoutAttachmentsInput = {
   create?: Prisma.XOR<Prisma.SubmissionCreateWithoutAttachmentsInput, Prisma.SubmissionUncheckedCreateWithoutAttachmentsInput>
   connectOrCreate?: Prisma.SubmissionCreateOrConnectWithoutAttachmentsInput
@@ -492,6 +518,7 @@ export type SubmissionCreateWithoutUserInput = {
   description: string
   status?: $Enums.SubmissionStatus
   priority?: $Enums.Priority
+  project?: $Enums.Project
   createdAt?: Date | string
   updatedAt?: Date | string
   attachments?: Prisma.AttachmentCreateNestedManyWithoutSubmissionInput
@@ -504,6 +531,7 @@ export type SubmissionUncheckedCreateWithoutUserInput = {
   description: string
   status?: $Enums.SubmissionStatus
   priority?: $Enums.Priority
+  project?: $Enums.Project
   createdAt?: Date | string
   updatedAt?: Date | string
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSubmissionInput
@@ -545,6 +573,7 @@ export type SubmissionScalarWhereInput = {
   description?: Prisma.StringFilter<"Submission"> | string
   status?: Prisma.EnumSubmissionStatusFilter<"Submission"> | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFilter<"Submission"> | $Enums.Priority
+  project?: Prisma.EnumProjectFilter<"Submission"> | $Enums.Project
   userId?: Prisma.StringFilter<"Submission"> | string
   createdAt?: Prisma.DateTimeFilter<"Submission"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Submission"> | Date | string
@@ -557,6 +586,7 @@ export type SubmissionCreateWithoutAttachmentsInput = {
   description: string
   status?: $Enums.SubmissionStatus
   priority?: $Enums.Priority
+  project?: $Enums.Project
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutSubmissionsInput
@@ -569,6 +599,7 @@ export type SubmissionUncheckedCreateWithoutAttachmentsInput = {
   description: string
   status?: $Enums.SubmissionStatus
   priority?: $Enums.Priority
+  project?: $Enums.Project
   userId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -597,6 +628,7 @@ export type SubmissionUpdateWithoutAttachmentsInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  project?: Prisma.EnumProjectFieldUpdateOperationsInput | $Enums.Project
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutSubmissionsNestedInput
@@ -609,6 +641,7 @@ export type SubmissionUncheckedUpdateWithoutAttachmentsInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  project?: Prisma.EnumProjectFieldUpdateOperationsInput | $Enums.Project
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -621,6 +654,7 @@ export type SubmissionCreateManyUserInput = {
   description: string
   status?: $Enums.SubmissionStatus
   priority?: $Enums.Priority
+  project?: $Enums.Project
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -632,6 +666,7 @@ export type SubmissionUpdateWithoutUserInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  project?: Prisma.EnumProjectFieldUpdateOperationsInput | $Enums.Project
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attachments?: Prisma.AttachmentUpdateManyWithoutSubmissionNestedInput
@@ -644,6 +679,7 @@ export type SubmissionUncheckedUpdateWithoutUserInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  project?: Prisma.EnumProjectFieldUpdateOperationsInput | $Enums.Project
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSubmissionNestedInput
@@ -656,6 +692,7 @@ export type SubmissionUncheckedUpdateManyWithoutUserInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumSubmissionStatusFieldUpdateOperationsInput | $Enums.SubmissionStatus
   priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  project?: Prisma.EnumProjectFieldUpdateOperationsInput | $Enums.Project
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -698,6 +735,7 @@ export type SubmissionSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   description?: boolean
   status?: boolean
   priority?: boolean
+  project?: boolean
   userId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -713,6 +751,7 @@ export type SubmissionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   description?: boolean
   status?: boolean
   priority?: boolean
+  project?: boolean
   userId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -726,6 +765,7 @@ export type SubmissionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   description?: boolean
   status?: boolean
   priority?: boolean
+  project?: boolean
   userId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -739,12 +779,13 @@ export type SubmissionSelectScalar = {
   description?: boolean
   status?: boolean
   priority?: boolean
+  project?: boolean
   userId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SubmissionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "type" | "title" | "description" | "status" | "priority" | "userId" | "createdAt" | "updatedAt", ExtArgs["result"]["submission"]>
+export type SubmissionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "type" | "title" | "description" | "status" | "priority" | "project" | "userId" | "createdAt" | "updatedAt", ExtArgs["result"]["submission"]>
 export type SubmissionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   attachments?: boolean | Prisma.Submission$attachmentsArgs<ExtArgs>
@@ -770,6 +811,7 @@ export type $SubmissionPayload<ExtArgs extends runtime.Types.Extensions.Internal
     description: string
     status: $Enums.SubmissionStatus
     priority: $Enums.Priority
+    project: $Enums.Project
     userId: string
     createdAt: Date
     updatedAt: Date
@@ -1204,6 +1246,7 @@ export interface SubmissionFieldRefs {
   readonly description: Prisma.FieldRef<"Submission", 'String'>
   readonly status: Prisma.FieldRef<"Submission", 'SubmissionStatus'>
   readonly priority: Prisma.FieldRef<"Submission", 'Priority'>
+  readonly project: Prisma.FieldRef<"Submission", 'Project'>
   readonly userId: Prisma.FieldRef<"Submission", 'String'>
   readonly createdAt: Prisma.FieldRef<"Submission", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Submission", 'DateTime'>
