@@ -5,16 +5,25 @@ import { useRouter } from "next/navigation";
 import { Trash2, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import type { Submission } from "@prisma/client";
+import type { Submission } from "@/generated/prisma/client/client";
 
-const STATUS_OPTIONS = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const;
+const STATUS_OPTIONS = ["OPEN", "IN_PROGRESS", "REVIEW", "COMPLETE", "CANCELED"] as const;
 const PRIORITY_OPTIONS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 
 const STATUS_LABELS: Record<string, string> = {
   OPEN: "Open",
   IN_PROGRESS: "In Progress",
-  RESOLVED: "Resolved",
-  CLOSED: "Closed",
+  REVIEW: "Review",
+  COMPLETE: "Complete",
+  CANCELED: "Canceled",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  OPEN: "bg-blue-500/15 border-blue-500/40 text-blue-300",
+  IN_PROGRESS: "bg-amber-500/15 border-amber-500/40 text-amber-300",
+  REVIEW: "bg-violet-500/15 border-violet-500/40 text-violet-300",
+  COMPLETE: "bg-emerald-500/15 border-emerald-500/40 text-emerald-300",
+  CANCELED: "bg-zinc-500/15 border-zinc-500/40 text-zinc-400",
 };
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -89,7 +98,7 @@ export default function AdminStatusControls({
                 className={cn(
                   "text-left px-3 py-1.5 rounded-lg text-xs font-500 border transition-all",
                   status === s
-                    ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300"
+                    ? STATUS_COLORS[s]
                     : "bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"
                 )}
               >
