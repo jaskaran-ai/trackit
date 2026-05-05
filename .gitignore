@@ -7,3 +7,4 @@ public/uploads/*
 prisma/migrations/
 *.log
 .DS_Store
+.commandcode/
