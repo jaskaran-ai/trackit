@@ -2,8 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, X, FileText, Image, Film, File } from "lucide-react";
+import { Upload, X, FileText, Image, Film, File, Cloud, HardDrive } from "lucide-react";
 import { cn, formatBytes, ACCEPTED_FILE_TYPES, MAX_FILE_SIZE, MAX_FILES } from "@/lib/utils";
+import { useUploadThing } from "@/lib/uploadthing-client";
+
+const USE_UPLOADTHING = process.env.NEXT_PUBLIC_USE_UPLOADTHING === "true";
 
 interface UploadedFile {
   id: string;
@@ -32,6 +35,11 @@ function FileIcon({ mimeType }: { mimeType: string }) {
 export default function FileUploadZone({ onFilesChange, files }: FileUploadZoneProps) {
   const [uploading, setUploading] = useState(false);
 
+  // Always call the hook (React rules) — only used when USE_UPLOADTHING is true
+  const { startUpload } = useUploadThing("submissionAttachments", {
+    onUploadError: (err) => console.error("UploadThing error:", err),
+  });
+
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       const remaining = MAX_FILES - files.length;
@@ -46,35 +54,51 @@ export default function FileUploadZone({ onFilesChange, files }: FileUploadZoneP
 
       const combined = [...files, ...newFiles];
       onFilesChange(combined);
-
-      // Upload immediately
       setUploading(true);
+
       try {
-        const formData = new FormData();
-        toAdd.forEach((f) => formData.append("files", f));
+        if (USE_UPLOADTHING) {
+          // UploadThing upload
+          const results = await startUpload(toAdd);
+          if (!results) throw new Error("Upload failed");
 
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
+          const updated = combined.map((f) => {
+            const match = results.find((r) => r.name === f.file.name);
+            if (!match) return f;
+            const serverData = match.serverData as { fileName: string; fileUrl: string; fileSize: number } | null;
+            return {
+              ...f,
+              uploaded: {
+                fileName: serverData?.fileName ?? match.name,
+                fileUrl: serverData?.fileUrl ?? match.ufsUrl,
+                fileSize: serverData?.fileSize ?? match.size,
+                mimeType: f.file.type,
+              },
+            };
+          });
+          onFilesChange(updated);
+        } else {
+          // Local upload
+          const formData = new FormData();
+          toAdd.forEach((f) => formData.append("files", f));
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
+          const res = await fetch("/api/upload", { method: "POST", body: formData });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
 
-        const updated = combined.map((f) => {
-          const match = data.files.find(
-            (u: any) => u.fileName === f.file.name
-          );
-          return match ? { ...f, uploaded: match } : f;
-        });
-        onFilesChange(updated);
+          const updated = combined.map((f) => {
+            const match = data.files.find((u: any) => u.fileName === f.file.name);
+            return match ? { ...f, uploaded: match } : f;
+          });
+          onFilesChange(updated);
+        }
       } catch (err) {
         console.error("Upload failed:", err);
       } finally {
         setUploading(false);
       }
     },
-    [files, onFilesChange]
+    [files, onFilesChange, startUpload]
   );
 
   const removeFile = (id: string) => {
@@ -91,6 +115,14 @@ export default function FileUploadZone({ onFilesChange, files }: FileUploadZoneP
 
   return (
     <div className="space-y-3">
+      {/* Provider indicator */}
+      {USE_UPLOADTHING && (
+        <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+          <Cloud size={10} className="text-violet-500" />
+          Uploads via UploadThing
+        </div>
+      )}
+
       {/* Drop zone */}
       {files.length < MAX_FILES && (
         <div
@@ -109,7 +141,10 @@ export default function FileUploadZone({ onFilesChange, files }: FileUploadZoneP
               <Upload size={18} className={isDragActive ? "text-indigo-400" : "text-zinc-500"} />
             </div>
             {uploading ? (
-              <div className="text-sm text-zinc-400">Uploading…</div>
+              <div className="flex items-center gap-2 text-sm text-zinc-400">
+                <div className="w-3 h-3 border border-zinc-600 border-t-indigo-400 rounded-full animate-spin" />
+                Uploading…
+              </div>
             ) : isDragActive ? (
               <div className="text-sm text-indigo-400 font-500">Drop files here</div>
             ) : (
@@ -157,9 +192,11 @@ export default function FileUploadZone({ onFilesChange, files }: FileUploadZoneP
                 <p className="text-sm text-zinc-200 truncate">{f.file.name}</p>
                 <p className="text-xs text-zinc-500">
                   {formatBytes(f.file.size)}
-                  {f.uploaded && (
+                  {f.uploaded ? (
                     <span className="ml-1.5 text-emerald-500">✓ Uploaded</span>
-                  )}
+                  ) : uploading ? (
+                    <span className="ml-1.5 text-zinc-600">Uploading…</span>
+                  ) : null}
                 </p>
               </div>
               <button
