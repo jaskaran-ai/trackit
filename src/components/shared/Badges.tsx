@@ -1,13 +1,7 @@
-import { cn, STATUS_COLORS, PRIORITY_COLORS, TYPE_COLORS } from "@/lib/utils";
-import type { SubmissionStatus, SubmissionType, Priority } from "@prisma/client";
+import { cn, STATUS_COLORS, PRIORITY_COLORS, TYPE_COLORS, STATUS_LABELS, PROJECT_LABELS } from "@/lib/utils";
+import type { SubmissionStatus, SubmissionType, Priority, Project } from "@/generated/prisma/client/enums";
 
 export function StatusBadge({ status }: { status: SubmissionStatus }) {
-  const labels: Record<SubmissionStatus, string> = {
-    OPEN: "Open",
-    IN_PROGRESS: "In Progress",
-    RESOLVED: "Resolved",
-    CLOSED: "Closed",
-  };
   return (
     <span
       className={cn(
@@ -15,7 +9,7 @@ export function StatusBadge({ status }: { status: SubmissionStatus }) {
         STATUS_COLORS[status]
       )}
     >
-      {labels[status]}
+      {STATUS_LABELS[status] ?? status}
     </span>
   );
 }
@@ -55,6 +49,14 @@ export function PriorityBadge({ priority }: { priority: Priority }) {
     >
       <span>{icons[priority]}</span>
       {labels[priority]}
+    </span>
+  );
+}
+
+export function ProjectBadge({ project }: { project: Project }) {
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-500 border bg-zinc-800 text-zinc-300 border-zinc-700">
+      {PROJECT_LABELS[project] ?? project}
     </span>
   );
 }
