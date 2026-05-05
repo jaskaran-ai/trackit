@@ -37,6 +37,7 @@ export default function RichTextEditor({
       CodeBlockExtension,
       Placeholder.configure({ placeholder }),
     ],
+    immediatelyRender: false,
     content: value,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
