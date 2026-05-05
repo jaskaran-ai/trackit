@@ -26,9 +26,26 @@ export function formatDate(date: Date | string): string {
 export const STATUS_COLORS = {
   OPEN: "bg-blue-500/15 text-blue-400 border-blue-500/30",
   IN_PROGRESS: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  RESOLVED: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  CLOSED: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
+  REVIEW: "bg-violet-500/15 text-violet-400 border-violet-500/30",
+  COMPLETE: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  CANCELED: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
 } as const;
+
+export const STATUS_LABELS: Record<string, string> = {
+  OPEN: "Open",
+  IN_PROGRESS: "In Progress",
+  REVIEW: "Review",
+  COMPLETE: "Complete",
+  CANCELED: "Canceled",
+};
+
+export const PROJECT_LABELS: Record<string, string> = {
+  IVALT_MOBILE: "iVALT Mobile App",
+  DOCU_ID: "DocuID",
+  ONDEMAND_ID: "OndemandID",
+  KEYCLOCK: "KeyClock",
+  OTHER: "Other",
+};
 
 export const PRIORITY_COLORS = {
   LOW: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
