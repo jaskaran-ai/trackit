@@ -1,9 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "./prisma";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -24,41 +22,32 @@ export const auth = betterAuth({
     }),
   ],
 
-  // Auto-assign admin role for emails listed in ADMIN_EMAILS
   user: {
     additionalFields: {
       role: {
         type: "string",
         defaultValue: "user",
+        input: false,
       },
     },
   },
 
-  callbacks: {
-    async session({ session, user }) {
-      return {
-        ...session,
-        user: {
-          ...session.user,
-          role: user.role,
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+            .split(",")
+            .map((e) => e.trim().toLowerCase());
+
+          if (adminEmails.includes(user.email.toLowerCase())) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { role: "admin" },
+            });
+          }
         },
-      };
-    },
-
-    async signIn({ user, isNewUser }) {
-      if (isNewUser) {
-        const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-          .split(",")
-          .map((e) => e.trim().toLowerCase());
-
-        if (adminEmails.includes(user.email.toLowerCase())) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { role: "admin" },
-          });
-        }
-      }
-      return true;
+      },
     },
   },
 });
