@@ -122,7 +122,7 @@ export default function SubmitPage() {
                     type="button"
                     onClick={() => setType(t)}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-500 border transition-all",
+                      "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-500 border transition-all cursor-pointer",
                       type === t
                         ? t === "BUG"
                           ? "bg-red-500/15 border-red-500/40 text-red-400"
@@ -172,7 +172,7 @@ export default function SubmitPage() {
                     type="button"
                     onClick={() => setPriority(value)}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-500 border transition-all",
+                      "px-3 py-1.5 rounded-lg text-xs font-500 border transition-all cursor-pointer",
                       priority === value
                         ? `bg-zinc-800 border-zinc-600 ${color}`
                         : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700"
@@ -199,7 +199,7 @@ export default function SubmitPage() {
                     type="button"
                     onClick={() => setProject(value)}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-500 border transition-all",
+                      "px-3 py-1.5 rounded-lg text-xs font-500 border transition-all cursor-pointer",
                       project === value
                         ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300"
                         : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"

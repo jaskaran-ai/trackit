@@ -202,7 +202,7 @@ export default function FileUploadZone({ onFilesChange, files }: FileUploadZoneP
               <button
                 type="button"
                 onClick={() => removeFile(f.id)}
-                className="p-1 text-zinc-600 hover:text-red-400 transition-colors shrink-0"
+                className="p-1 text-zinc-600 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
               >
                 <X size={14} />
               </button>

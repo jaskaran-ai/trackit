@@ -96,7 +96,7 @@ export default function AdminStatusControls({
                 type="button"
                 onClick={() => setStatus(s)}
                 className={cn(
-                  "text-left px-3 py-1.5 rounded-lg text-xs font-500 border transition-all",
+                  "text-left px-3 py-1.5 rounded-lg text-xs font-500 border transition-all cursor-pointer",
                   status === s
                     ? STATUS_COLORS[s]
                     : "bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"
@@ -118,7 +118,7 @@ export default function AdminStatusControls({
                 type="button"
                 onClick={() => setPriority(p)}
                 className={cn(
-                  "text-left px-3 py-1.5 rounded-lg text-xs font-500 border transition-all",
+                  "text-left px-3 py-1.5 rounded-lg text-xs font-500 border transition-all cursor-pointer",
                   priority === p
                     ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300"
                     : "bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"

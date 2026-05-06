@@ -118,7 +118,7 @@ export default function RichTextEditor({
             onClick={action}
             title={label}
             className={cn(
-              "p-1.5 rounded-md transition-colors",
+              "p-1.5 rounded-md transition-colors cursor-pointer",
               active
                 ? "bg-indigo-500/20 text-indigo-400"
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
