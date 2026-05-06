@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/shared/Navbar";
 import { StatusBadge, TypeBadge, PriorityBadge } from "@/components/shared/Badges";
 import { formatDate, formatBytes } from "@/lib/utils";
-import { ChevronLeft, Paperclip, Download, FileText, Image as ImageIcon, Film } from "lucide-react";
+import { ChevronLeft, Paperclip, Download, FileText, Film } from "lucide-react";
 import Link from "next/link";
 
 function FilePreview({ att }: { att: any }) {
@@ -20,17 +20,24 @@ function FilePreview({ att }: { att: any }) {
       rel="noopener noreferrer"
       className="flex items-center gap-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-2.5 transition-all group"
     >
-      <div className="w-8 h-8 bg-zinc-800 rounded-md flex items-center justify-center shrink-0">
-        {isImage ? (
-          <ImageIcon size={15} className="text-blue-400" />
-        ) : isPDF ? (
-          <FileText size={15} className="text-red-400" />
-        ) : isVideo ? (
-          <Film size={15} className="text-violet-400" />
-        ) : (
-          <FileText size={15} className="text-zinc-400" />
-        )}
-      </div>
+      {isImage ? (
+        <img
+          src={att.fileUrl}
+          alt={att.fileName}
+          className="w-8 h-8 rounded-md object-cover shrink-0"
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-8 h-8 bg-zinc-800 rounded-md flex items-center justify-center shrink-0">
+          {isPDF ? (
+            <FileText size={15} className="text-red-400" />
+          ) : isVideo ? (
+            <Film size={15} className="text-violet-400" />
+          ) : (
+            <FileText size={15} className="text-zinc-400" />
+          )}
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <p className="text-sm text-zinc-200 truncate">{att.fileName}</p>
         <p className="text-xs text-zinc-600">{formatBytes(att.fileSize)}</p>
