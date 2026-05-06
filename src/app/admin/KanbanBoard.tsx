@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { SubmissionWithUser } from "@/types";
 import type { SubmissionStatus } from "@/generated/prisma/client/enums";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 const COLUMNS: { status: SubmissionStatus; color: string; dot: string }[] = [
   { status: "OPEN", color: "border-blue-500/30", dot: "bg-blue-400" },
@@ -29,9 +30,11 @@ const STATUS_BG: Record<SubmissionStatus, string> = {
 function KanbanCard({
   submission,
   onStatusChange,
+  index,
 }: {
   submission: SubmissionWithUser;
   onStatusChange: (id: string, status: SubmissionStatus) => void;
+  index: number;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -40,76 +43,99 @@ function KanbanCard({
   );
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2.5 hover:border-zinc-700 transition-colors">
-      {/* Project tag */}
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-[10px] font-500 text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
-          {PROJECT_LABELS[submission.project] ?? submission.project}
-        </span>
-        <Link
-          href={`/admin/submission/${submission.id}`}
-          className="text-[10px] text-zinc-600 hover:text-indigo-400 transition-colors flex items-center gap-0.5"
+    <Draggable draggableId={submission.id} index={index}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className={cn(
+            "bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2.5 transition-colors",
+            snapshot.isDragging ? "border-indigo-500 shadow-lg shadow-indigo-500/20 rotate-2" : "hover:border-zinc-700"
+          )}
         >
-          View <ChevronRight size={10} />
-        </Link>
-      </div>
-
-      {/* Title */}
-      <p className="text-sm font-500 text-zinc-200 leading-snug line-clamp-2">{submission.title}</p>
-
-      {/* Badges */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <TypeBadge type={submission.type} />
-        <PriorityBadge priority={submission.priority} />
-      </div>
-
-      {/* Reporter */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          {submission.user.image ? (
-            <img
-              src={submission.user.image}
-              alt={submission.user.name}
-              className="w-4 h-4 rounded-full"
-            />
-          ) : (
-            <div className="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-[8px] text-white font-600 shrink-0">
-              {submission.user.name?.[0]}
+          {/* Header with drag handle */}
+          <div className="flex items-center justify-between gap-1">
+            <div className="flex items-center gap-2">
+              <div
+                {...provided.dragHandleProps}
+                className="cursor-grab active:cursor-grabbing text-zinc-600 hover:text-zinc-400 transition-colors"
+              >
+                <GripVertical size={14} />
+              </div>
+              <span className="text-[10px] font-500 text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+                {PROJECT_LABELS[submission.project] ?? submission.project}
+              </span>
             </div>
-          )}
-          <span className="text-[10px] text-zinc-500 truncate max-w-[80px]">
-            {submission.user.name}
-          </span>
-        </div>
+            <Link
+              href={`/admin/submission/${submission.id}`}
+              className="text-[10px] text-zinc-600 hover:text-indigo-400 transition-colors flex items-center gap-0.5"
+            >
+              View <ChevronRight size={10} />
+            </Link>
+          </div>
 
-        {/* Move to dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setOpen((v) => !v)}
-            onBlur={() => setTimeout(() => setOpen(false), 150)}
-            className="text-[10px] text-zinc-600 hover:text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 px-2 py-0.5 rounded transition-colors"
-          >
-            Move →
-          </button>
-          {open && (
-            <div className="absolute right-0 bottom-6 z-10 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl min-w-[120px] py-1 overflow-hidden">
-              {otherStatuses.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => {
-                    setOpen(false);
-                    onStatusChange(submission.id, s);
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 transition-colors"
-                >
-                  {STATUS_LABELS[s]}
-                </button>
-              ))}
+          {/* Title */}
+          <p className="text-sm font-500 text-zinc-200 leading-snug line-clamp-2">{submission.title}</p>
+
+          {/* Badges */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <TypeBadge type={submission.type} />
+            <PriorityBadge priority={submission.priority} />
+          </div>
+
+          {/* Reporter */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              {submission.user.image ? (
+                <img
+                  src={submission.user.image}
+                  alt={submission.user.name}
+                  className="w-4 h-4 rounded-full"
+                />
+              ) : (
+                <div className="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-[8px] text-white font-600 shrink-0">
+                  {submission.user.name?.[0]}
+                </div>
+              )}
+              <span className="text-[10px] text-zinc-500 truncate max-w-[80px]">
+                {submission.user.name}
+              </span>
             </div>
-          )}
+
+            {/* Move to dropdown */}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpen((v) => !v);
+                }}
+                onBlur={() => setTimeout(() => setOpen(false), 150)}
+                className="text-[10px] text-zinc-600 hover:text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 px-2 py-0.5 rounded transition-colors"
+              >
+                Move →
+              </button>
+              {open && (
+                <div className="absolute right-0 bottom-6 z-10 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl min-w-[120px] py-1 overflow-hidden">
+                  {otherStatuses.map((s) => (
+                    <button
+                      key={s}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpen(false);
+                        onStatusChange(submission.id, s);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 transition-colors"
+                    >
+                      {STATUS_LABELS[s]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </Draggable>
   );
 }
 
@@ -140,48 +166,73 @@ export default function KanbanBoard({
     }
   };
 
-  return (
-    <div className="flex gap-4 overflow-x-auto pb-4 min-h-[400px]">
-      {COLUMNS.map(({ status, color, dot }) => {
-        const cards = submissions.filter((s) => s.status === status);
-        return (
-          <div key={status} className="flex-1 min-w-[220px] max-w-[280px]">
-            {/* Column header */}
-            <div
-              className={cn(
-                "flex items-center gap-2 mb-3 px-3 py-2 rounded-xl border",
-                STATUS_BG[status],
-                color
-              )}
-            >
-              <span className={cn("w-2 h-2 rounded-full", dot)} />
-              <span className="text-xs font-600 text-zinc-300">
-                {STATUS_LABELS[status]}
-              </span>
-              <span className="ml-auto text-xs font-500 text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded-full">
-                {cards.length}
-              </span>
-            </div>
+  const handleDragEnd = async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
 
-            {/* Cards */}
-            <div className="space-y-2">
-              {cards.length === 0 ? (
-                <div className="text-center py-8 text-xs text-zinc-700 border border-dashed border-zinc-800 rounded-xl">
-                  No items
-                </div>
-              ) : (
-                cards.map((s) => (
-                  <KanbanCard
-                    key={s.id}
-                    submission={s}
-                    onStatusChange={handleStatusChange}
-                  />
-                ))
-              )}
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    const newStatus = destination.droppableId as SubmissionStatus;
+    await handleStatusChange(draggableId, newStatus);
+  };
+
+  return (
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <div className="flex gap-4 overflow-x-auto pb-4 min-h-[400px]">
+        {COLUMNS.map(({ status, color, dot }) => {
+          const cards = submissions.filter((s) => s.status === status);
+          return (
+            <div key={status} className="flex-1 min-w-[220px] max-w-[280px]">
+              {/* Column header */}
+              <div
+                className={cn(
+                  "flex items-center gap-2 mb-3 px-3 py-2 rounded-xl border",
+                  STATUS_BG[status],
+                  color
+                )}
+              >
+                <span className={cn("w-2 h-2 rounded-full", dot)} />
+                <span className="text-xs font-600 text-zinc-300">
+                  {STATUS_LABELS[status]}
+                </span>
+                <span className="ml-auto text-xs font-500 text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded-full">
+                  {cards.length}
+                </span>
+              </div>
+
+              {/* Cards */}
+              <Droppable droppableId={status} key={status}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={cn(
+                      "space-y-2 min-h-[200px] rounded-xl p-1 transition-colors",
+                      snapshot.isDraggingOver ? "bg-zinc-800/50" : ""
+                    )}
+                  >
+                    {cards.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-zinc-700 border border-dashed border-zinc-800 rounded-xl">
+                        No items
+                      </div>
+                    ) : (
+                      cards.map((s, index) => (
+                        <KanbanCard
+                          key={s.id}
+                          submission={s}
+                          onStatusChange={handleStatusChange}
+                          index={index}
+                        />
+                      ))
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
             </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </DragDropContext>
   );
 }
