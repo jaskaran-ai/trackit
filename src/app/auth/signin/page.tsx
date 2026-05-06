@@ -37,16 +37,27 @@ export default function SignInPage() {
         />
 
         <div className="relative z-10">
+
           <div className="flex items-center gap-3 mb-16">
-            <div className="w-9 h-9 bg-indigo-500 rounded-lg flex items-center justify-center">
-              <Bug size={18} className="text-white" />
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-indigo-500 rounded-lg flex items-center justify-center">
+                <Bug size={18} className="text-white" />
+              </div>
+              <span className="font-display text-xl font-700 text-white">TrackIt</span>
             </div>
-            <span className="font-display text-xl font-700 text-white">TrackIt</span>
+            <p className="text-4xl font-bold">+</p>
+            <div>
+            <img
+              src="https://docs.docuid.net/logo.webp"
+              alt="iVALT"
+              className="h-9 w-auto"
+            />
+            </div>
           </div>
 
           <h1 className="font-display text-4xl font-800 text-white leading-tight mb-6">
             Ship better software,<br />
-            <span className="text-indigo-400">together.</span>
+            <span className="text-indigo-400 le">together.</span>
           </h1>
           <p className="text-zinc-400 text-lg leading-relaxed max-w-md">
             Track bugs and feature requests in one place. Keep your team aligned from first report to final fix.
