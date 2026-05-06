@@ -21,7 +21,7 @@ export default async function AdminPage() {
       },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.$transaction([
+    Promise.all([
       prisma.submission.count(),
       prisma.submission.count({ where: { status: "OPEN" } }),
       prisma.submission.count({ where: { status: "IN_PROGRESS" } }),

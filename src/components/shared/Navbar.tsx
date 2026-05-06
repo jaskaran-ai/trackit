@@ -22,10 +22,12 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
         {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
-          <div className="w-7 h-7 bg-indigo-500 rounded-md flex items-center justify-center">
-            <Bug size={14} className="text-white" />
-          </div>
+        <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
+          <img
+            src="https://docs.docuid.net/logo.webp"
+            alt="iVALT"
+            className="h-6 w-auto"
+          />
           <span className="font-display text-base font-700 text-white hidden sm:block">TrackIt</span>
         </Link>
 
