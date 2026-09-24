@@ -1,6 +1,6 @@
 # TrackIt — Bug & Feature Request Tracker
 
-A full-stack Next.js 15 app to track bug reports and feature requests. Built with Better Auth (Google OAuth), PostgreSQL (Neon), Prisma, Tiptap, and Tailwind CSS.
+A full-stack Next.js 16 app to track bug reports and feature requests. Built with Better Auth (Google OAuth), PostgreSQL (Neon), Prisma, Tiptap, and Tailwind CSS.
 
 ---
 
@@ -8,7 +8,7 @@ A full-stack Next.js 15 app to track bug reports and feature requests. Built wit
 
 | Layer | Choice |
 |-------|--------|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Auth | Better Auth v1 + Google OAuth + Admin plugin |
 | Database | PostgreSQL via Neon |
 | ORM | Prisma 6 |
