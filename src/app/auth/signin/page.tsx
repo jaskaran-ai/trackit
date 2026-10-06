@@ -1,12 +1,11 @@
 "use client";
 
 import { signIn } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Bug, Sparkles, Shield } from "lucide-react";
+import BrandLogo from "@/components/shared/BrandLogo";
 
 export default function SignInPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
@@ -38,26 +37,14 @@ export default function SignInPage() {
 
         <div className="relative z-10">
 
-          <div className="flex items-center gap-3 mb-16">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-indigo-500 rounded-lg flex items-center justify-center">
-                <Bug size={18} className="text-white" />
-              </div>
-              <span className="font-display text-xl font-700 text-white">TrackIt</span>
-            </div>
-            <p className="text-4xl font-bold">+</p>
-            <div>
-            <img
-              src="https://docs.docuid.net/logo.webp"
-              alt="iVALT"
-              className="h-9 w-auto"
-            />
-            </div>
+          <div className="mb-16">
+            <BrandLogo className="h-10 sm:h-12" />
+            <p className="mt-3 text-sm text-zinc-500">Bug & feature tracker</p>
           </div>
 
           <h1 className="font-display text-4xl font-800 text-white leading-tight mb-6">
             Ship better software,<br />
-            <span className="text-indigo-400 le">together.</span>
+            <span className="text-indigo-400">together.</span>
           </h1>
           <p className="text-zinc-400 text-lg leading-relaxed max-w-md">
             Track bugs and feature requests in one place. Keep your team aligned from first report to final fix.
@@ -87,11 +74,8 @@ export default function SignInPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-sm animate-fade-up">
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-10 lg:hidden">
-            <div className="w-9 h-9 bg-indigo-500 rounded-lg flex items-center justify-center">
-              <Bug size={18} className="text-white" />
-            </div>
-            <span className="font-display text-xl font-700 text-white">TrackIt</span>
+          <div className="mb-10 lg:hidden">
+            <BrandLogo className="h-9" />
           </div>
 
           <div className="mb-8">

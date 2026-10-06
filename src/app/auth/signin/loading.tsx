@@ -4,12 +4,7 @@ export default function SignInLoading() {
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-zinc-900 relative overflow-hidden flex-col justify-between p-12">
         <div className="space-y-16 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-zinc-800 animate-pulse" />
-            <div className="w-20 h-5 rounded bg-zinc-800 animate-pulse" />
-            <div className="w-4 h-4 rounded bg-zinc-800 animate-pulse" />
-            <div className="w-9 h-9 rounded bg-zinc-800 animate-pulse" />
-          </div>
+          <div className="w-52 h-10 rounded bg-zinc-800 animate-pulse" />
 
           <div className="space-y-4">
             <div className="w-64 h-10 rounded bg-zinc-800 animate-pulse" />
@@ -35,10 +30,7 @@ export default function SignInLoading() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-sm space-y-6">
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-10 lg:hidden">
-            <div className="w-9 h-9 rounded-lg bg-zinc-800 animate-pulse" />
-            <div className="w-20 h-5 rounded bg-zinc-800 animate-pulse" />
-          </div>
+          <div className="w-44 h-9 rounded bg-zinc-800 animate-pulse mb-10 lg:hidden" />
 
           <div className="space-y-2 mb-8">
             <div className="w-32 h-7 rounded bg-zinc-800 animate-pulse" />
