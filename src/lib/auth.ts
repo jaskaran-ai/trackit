@@ -1,12 +1,20 @@
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins";
-import { prisma } from "./prisma";
+import { eq } from "drizzle-orm";
+import { db, user } from "@/db";
+import * as schema from "@/db/schema";
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
-    provider: "postgresql",
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema,
   }),
+
+  baseURL: process.env.BETTER_AUTH_URL,
+  trustedOrigins: process.env.TRUSTED_ORIGINS
+    ? process.env.TRUSTED_ORIGINS.split(",").map((o) => o.trim())
+    : [process.env.BETTER_AUTH_URL ?? "http://localhost:3000"],
 
   socialProviders: {
     google: {
@@ -35,16 +43,16 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        after: async (user) => {
+        after: async (createdUser) => {
           const adminEmails = (process.env.ADMIN_EMAILS ?? "")
             .split(",")
             .map((e) => e.trim().toLowerCase());
 
-          if (adminEmails.includes(user.email.toLowerCase())) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { role: "admin" },
-            });
+          if (adminEmails.includes(createdUser.email.toLowerCase())) {
+            await db
+              .update(user)
+              .set({ role: "admin", updatedAt: new Date() })
+              .where(eq(user.id, createdUser.id));
           }
         },
       },

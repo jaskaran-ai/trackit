@@ -5,8 +5,12 @@ node_modules/
 public/uploads/*
 !public/uploads/.gitkeep
 prisma/migrations/
+src/db/auth-schema.generated.ts
+drizzle/
 *.log
 .DS_Store
 .commandcode/
 codedb.snapshot
 tsconfig.tsbuildinfo
+# Added by code-review-graph
+.code-review-graph/

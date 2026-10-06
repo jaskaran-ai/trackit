@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { listSubmissions } from "@/db/submissions";
 import Navbar from "@/components/shared/Navbar";
 import SubmissionCard from "@/components/shared/SubmissionCard";
 import Link from "next/link";
@@ -12,14 +12,7 @@ export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/auth/signin");
 
-  const submissions = await prisma.submission.findMany({
-    where: { userId: session.user.id },
-    include: {
-      user: { select: { id: true, name: true, email: true, image: true } },
-      attachments: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const submissions = await listSubmissions({ userId: session.user.id });
 
   const bugs = submissions.filter((s) => s.type === "BUG");
   const features = submissions.filter((s) => s.type === "FEATURE");

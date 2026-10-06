@@ -1,4 +1,4 @@
-import type { Submission, Attachment, User } from "@/generated/prisma/client/client";
+import type { Attachment, Submission, User } from "@/db/types";
 
 export type SubmissionWithUser = Submission & {
   user: Pick<User, "id" | "name" | "email" | "image">;
@@ -13,3 +13,13 @@ export type SessionUser = {
   image?: string | null;
   role: string;
 };
+
+export type {
+  Attachment,
+  Priority,
+  Project,
+  Submission,
+  SubmissionStatus,
+  SubmissionType,
+  User,
+} from "@/db/types";

@@ -1,5 +1,5 @@
 import { cn, STATUS_COLORS, PRIORITY_COLORS, TYPE_COLORS, STATUS_LABELS, PROJECT_LABELS } from "@/lib/utils";
-import type { SubmissionStatus, SubmissionType, Priority, Project } from "@/generated/prisma/client/enums";
+import type { Priority, Project, SubmissionStatus, SubmissionType } from "@/db/types";
 
 export function StatusBadge({ status }: { status: SubmissionStatus }) {
   return (

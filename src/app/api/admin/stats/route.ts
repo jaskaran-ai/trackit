@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
+import { countSubmissions, countUsers } from "@/db/submissions";
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -11,15 +11,15 @@ export async function GET(req: NextRequest) {
 
   const [total, open, inProgress, review, complete, canceled, bugs, features, users] =
     await Promise.all([
-      prisma.submission.count(),
-      prisma.submission.count({ where: { status: "OPEN" } }),
-      prisma.submission.count({ where: { status: "IN_PROGRESS" } }),
-      prisma.submission.count({ where: { status: "REVIEW" } }),
-      prisma.submission.count({ where: { status: "COMPLETE" } }),
-      prisma.submission.count({ where: { status: "CANCELED" } }),
-      prisma.submission.count({ where: { type: "BUG" } }),
-      prisma.submission.count({ where: { type: "FEATURE" } }),
-      prisma.user.count(),
+      countSubmissions(),
+      countSubmissions({ status: "OPEN" }),
+      countSubmissions({ status: "IN_PROGRESS" }),
+      countSubmissions({ status: "REVIEW" }),
+      countSubmissions({ status: "COMPLETE" }),
+      countSubmissions({ status: "CANCELED" }),
+      countSubmissions({ type: "BUG" }),
+      countSubmissions({ type: "FEATURE" }),
+      countUsers(),
     ]);
 
   return NextResponse.json({

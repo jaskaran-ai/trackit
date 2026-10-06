@@ -1,6 +1,6 @@
 # TrackIt — Bug & Feature Request Tracker
 
-A full-stack Next.js 16 app to track bug reports and feature requests. Built with Better Auth (Google OAuth), PostgreSQL (Neon), Prisma, Tiptap, and Tailwind CSS.
+A full-stack Next.js 16 app to track bug reports and feature requests. Built with Better Auth (Google OAuth), PostgreSQL (Supabase), Prisma, Tiptap, and Tailwind CSS.
 
 ---
 
@@ -10,11 +10,11 @@ A full-stack Next.js 16 app to track bug reports and feature requests. Built wit
 |-------|--------|
 | Framework | Next.js 16 (App Router) |
 | Auth | Better Auth v1 + Google OAuth + Admin plugin |
-| Database | PostgreSQL via Neon |
-| ORM | Prisma 6 |
-| Rich text | Tiptap 2 |
-| File uploads | Local disk (`public/uploads`) |
-| Styling | Tailwind CSS v3 + custom design system |
+| Database | PostgreSQL via Supabase |
+| ORM | Drizzle ORM |
+| Rich text | Tiptap 3 |
+| File uploads | Local disk (`public/uploads`) or UploadThing |
+| Styling | Tailwind CSS v4 + custom design system |
 | Fonts | Syne (display) + DM Sans (body) |
 
 ---
@@ -38,8 +38,10 @@ cp .env.example .env
 Fill in all values:
 
 ```env
-# Neon PostgreSQL connection string
-DATABASE_URL="postgresql://user:pass@ep-xxx.neon.tech/trackit?sslmode=require"
+# Supabase — transaction pooler (app runtime)
+DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require"
+# Supabase — direct (migrations / prisma db push)
+DIRECT_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres?sslmode=require"
 
 # Generate with: openssl rand -base64 32
 BETTER_AUTH_SECRET="your-secret-here"
@@ -66,14 +68,11 @@ ADMIN_EMAILS="you@yourcompany.com"
 ### 4. Push database schema
 
 ```bash
-# Generate Prisma client
-npm run db:generate
-
-# Push schema to Neon (creates all tables)
-npm run db:push
+# Push Drizzle schema to Supabase (creates/updates tables)
+pnpm run db:push
 ```
 
-> Better Auth automatically manages its own tables (`user`, `session`, `account`, `verification`) via Prisma.
+> Better Auth manages auth tables (`user`, `session`, `account`, `verification`) via the Drizzle adapter.
 
 ### 5. Run development server
 
@@ -121,7 +120,7 @@ src/
 ├── lib/
 │   ├── auth.ts                # Better Auth server config
 │   ├── auth-client.ts         # Better Auth client
-│   ├── prisma.ts              # Prisma singleton
+│   ├── db/                    # Drizzle schema + queries
 │   └── utils.ts               # Helpers + constants
 └── types/index.ts
 ```
@@ -139,6 +138,7 @@ vercel
 
 # Set environment variables
 vercel env add DATABASE_URL
+vercel env add DIRECT_URL
 vercel env add BETTER_AUTH_SECRET
 vercel env add BETTER_AUTH_URL        # set to https://yourdomain.com
 vercel env add GOOGLE_CLIENT_ID

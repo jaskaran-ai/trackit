@@ -7,7 +7,7 @@ import { PROJECT_LABELS, STATUS_LABELS } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { SubmissionWithUser } from "@/types";
-import type { SubmissionStatus } from "@/generated/prisma/client/enums";
+import type { SubmissionStatus } from "@/db/types";
 import { ChevronRight, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 

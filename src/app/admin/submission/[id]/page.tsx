@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { getSubmissionById } from "@/db/submissions";
 import Navbar from "@/components/shared/Navbar";
 import { StatusBadge, TypeBadge, PriorityBadge } from "@/components/shared/Badges";
 import AdminStatusControls from "./AdminStatusControls";
@@ -27,13 +27,7 @@ export default async function AdminSubmissionDetailPage({
   if (session.user.role !== "admin") redirect("/dashboard");
 
   const { id } = await params;
-  const submission = await prisma.submission.findUnique({
-    where: { id },
-    include: {
-      user: { select: { id: true, name: true, email: true, image: true } },
-      attachments: true,
-    },
-  });
+  const submission = await getSubmissionById(id);
 
   if (!submission) notFound();
 

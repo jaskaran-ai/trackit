@@ -6,7 +6,7 @@ import { StatusBadge, TypeBadge, PriorityBadge, ProjectBadge } from "@/component
 import { formatDate, PROJECT_LABELS } from "@/lib/utils";
 import { Search, Paperclip, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import type { SubmissionWithUser } from "@/types";
-import type { SubmissionStatus, SubmissionType, Priority, Project } from "@/generated/prisma/client/enums";
+import type { Priority, Project, SubmissionStatus, SubmissionType } from "@/db/types";
 
 type SortKey = "createdAt" | "status" | "type" | "priority" | "title";
 type SortDir = "asc" | "desc";

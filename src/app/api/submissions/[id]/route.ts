@@ -1,25 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import path from "path";
 import fs from "fs/promises";
+import {
+  deleteSubmission,
+  getSubmissionById,
+  listAttachmentsForSubmission,
+  updateSubmission,
+} from "@/db/submissions";
+import type { Priority, SubmissionStatus } from "@/db/types";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const submission = await prisma.submission.findUnique({
-    where: { id },
-    include: {
-      user: { select: { id: true, name: true, email: true, image: true } },
-      attachments: true,
-    },
-  });
+  const submission = await getSubmissionById(id);
 
   if (!submission) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -35,7 +35,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -45,18 +45,14 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { status, priority } = body;
+  const { status, priority } = body as {
+    status?: SubmissionStatus;
+    priority?: Priority;
+  };
 
-  const submission = await prisma.submission.update({
-    where: { id },
-    data: {
-      ...(status ? { status } : {}),
-      ...(priority ? { priority } : {}),
-    },
-    include: {
-      user: { select: { id: true, name: true, email: true, image: true } },
-      attachments: true,
-    },
+  const submission = await updateSubmission(id, {
+    ...(status ? { status } : {}),
+    ...(priority ? { priority } : {}),
   });
 
   return NextResponse.json(submission);
@@ -64,7 +60,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -74,8 +70,7 @@ export async function DELETE(
 
   const { id } = await params;
 
-  // Delete local attachments from disk
-  const attachments = await prisma.attachment.findMany({ where: { submissionId: id } });
+  const attachments = await listAttachmentsForSubmission(id);
   for (const att of attachments) {
     try {
       const filePath = path.join(process.cwd(), "public", att.fileUrl);
@@ -85,6 +80,6 @@ export async function DELETE(
     }
   }
 
-  await prisma.submission.delete({ where: { id } });
+  await deleteSubmission(id);
   return NextResponse.json({ success: true });
 }

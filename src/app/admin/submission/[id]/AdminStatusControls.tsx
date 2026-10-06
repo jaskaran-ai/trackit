@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Trash2, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import type { Submission } from "@/generated/prisma/client/client";
+import type { Submission } from "@/db/types";
 
 const STATUS_OPTIONS = ["OPEN", "IN_PROGRESS", "REVIEW", "COMPLETE", "CANCELED"] as const;
 const PRIORITY_OPTIONS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;

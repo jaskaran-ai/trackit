@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { countSubmissions, countUsers, listSubmissions } from "@/db/submissions";
 import Navbar from "@/components/shared/Navbar";
 import AdminTable from "./AdminTable";
 import KanbanBoard from "./KanbanBoard";
@@ -14,20 +14,14 @@ export default async function AdminPage() {
   if (session.user.role !== "admin") redirect("/dashboard");
 
   const [submissions, stats] = await Promise.all([
-    prisma.submission.findMany({
-      include: {
-        user: { select: { id: true, name: true, email: true, image: true } },
-        attachments: true,
-      },
-      orderBy: { createdAt: "desc" },
-    }),
+    listSubmissions(),
     Promise.all([
-      prisma.submission.count(),
-      prisma.submission.count({ where: { status: "OPEN" } }),
-      prisma.submission.count({ where: { status: "IN_PROGRESS" } }),
-      prisma.submission.count({ where: { type: "BUG" } }),
-      prisma.submission.count({ where: { type: "FEATURE" } }),
-      prisma.user.count(),
+      countSubmissions(),
+      countSubmissions({ status: "OPEN" }),
+      countSubmissions({ status: "IN_PROGRESS" }),
+      countSubmissions({ type: "BUG" }),
+      countSubmissions({ type: "FEATURE" }),
+      countUsers(),
     ]),
   ]);
 
