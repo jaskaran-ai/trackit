@@ -1,16 +1,48 @@
+# Dependencies & build
 .next/
 node_modules/
+tsconfig.tsbuildinfo
+
+# Environment
 .env
 .env.local
+.env.*.local
+
+# User uploads
 public/uploads/*
 !public/uploads/.gitkeep
-prisma/migrations/
+
+# Drizzle
 src/db/auth-schema.generated.ts
 drizzle/
+
+# Deploy
+.vercel/
+
+# Logs & OS
 *.log
 .DS_Store
+
+# Local / tooling
 .commandcode/
 codedb.snapshot
-tsconfig.tsbuildinfo
-# Added by code-review-graph
 .code-review-graph/
+
+# AI agent & editor config (local only)
+.claude/
+.codebuddy/
+.cursor/
+.gemini/
+.kiro/
+.qoder/
+.serena/
+.mcp.json
+opencode.jsonc
+.cursorrules
+.windsurfrules
+AGENTS.md
+CLAUDE.md
+CODEBUDDY.md
+GEMINI.md
+QODER.md
+task.md
