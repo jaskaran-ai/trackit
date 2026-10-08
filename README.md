@@ -1,6 +1,22 @@
 # TrackIt — Bug & Feature Request Tracker
 
-A full-stack Next.js 16 app to track bug reports and feature requests. Built with Better Auth (Google OAuth), PostgreSQL (Supabase), Prisma, Tiptap, and Tailwind CSS.
+A full-stack Next.js 16 app to track bug reports and feature requests. Built with Better Auth (Google OAuth), PostgreSQL (Supabase), Drizzle ORM, Tiptap, and Tailwind CSS.
+
+---
+
+## Features
+
+**Submissions.** Report bugs or request features with a title, rich-text description, priority, project, due date, and drag-and-drop attachments. Titles are checked against existing submissions for likely duplicates before you submit.
+
+**Discussion.** Every submission has a comment thread and an audit timeline showing who changed the status or priority and when. Feature requests can be upvoted.
+
+**Notifications.** In-app notification bell with an unread count and a full inbox page at `/notifications`. Owners are pinged when an admin changes a submission or replies to the discussion.
+
+**User surfaces.** Personal dashboard with search, status/type/priority/project filters, and sorting. Attachment viewer with keyboard navigation. Settings page at `/settings` with a light/dark/system theme toggle and notification preferences.
+
+**Admin surfaces.** Admin dashboard with stat cards and charts (30-day created vs resolved, per-project breakdown, average resolution time), a paginated table with bulk actions, a drag-and-drop Kanban board, aging badges and due dates, saved filter views, user role management, CSV export, and an archive page for soft-deleted submissions.
+
+**Roles.** `admin` and `user`, assigned on first sign-in from `ADMIN_EMAILS`, or changed later from the admin panel.
 
 ---
 
@@ -107,23 +123,33 @@ src/
 │   ├── dashboard/             # User's own submissions
 │   ├── submit/                # New submission form
 │   ├── submission/[id]/       # User submission detail
+│   ├── notifications/         # Inbox
+│   ├── settings/              # Profile + preferences
 │   └── admin/
-│       ├── page.tsx           # Admin dashboard + table
+│       ├── page.tsx           # Admin dashboard, charts, user roles
+│       ├── archived/          # Soft-deleted submissions
 │       └── submission/[id]/   # Admin detail + controls
 ├── components/
+│   ├── admin/                 # AgingBadge, BulkActions, SavedViews,
+│   │                           # StatsCharts, UserManagement, ArchivedList
+│   ├── layout/                # NotificationBell, NotificationList
+│   ├── dashboard/             # DashboardFilters
+│   ├── submission/            # CommentsSection, StatusHistory, AttachmentList
+│   ├── theme/                 # ThemeProvider, ThemeToggle
 │   └── shared/
 │       ├── Navbar.tsx
-│       ├── Badges.tsx         # Status, Type, Priority badges
+│       ├── Badges.tsx         # Status, Type, Priority, Project badges
+│       ├── VoteButton.tsx
+│       ├── AttachmentLightbox.tsx
 │       ├── RichTextEditor.tsx # Tiptap editor
 │       ├── FileUploadZone.tsx # Dropzone upload
 │       └── SubmissionCard.tsx
-├── lib/
-│   ├── auth.ts                # Better Auth server config
-│   ├── auth-client.ts         # Better Auth client
-│   ├── db/                    # Drizzle schema + queries
-│   └── utils.ts               # Helpers + constants
-└── types/index.ts
+├── db/                         # Drizzle schema + per-domain query modules
+└── types/
 ```
+
+> **Commands:** `pnpm dev`, `pnpm build`, `pnpm typecheck`, `pnpm db:push`.
+> `pnpm lint` currently fails because `typescript-eslint` does not support the TypeScript 7 this project pins. Use `pnpm typecheck` until that dependency is bumped.
 
 ---
 
