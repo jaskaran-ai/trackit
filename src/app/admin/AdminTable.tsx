@@ -29,6 +29,13 @@ import toast from "react-hot-toast";
 type SortKey = "createdAt" | "status" | "type" | "priority" | "title";
 type SortDir = "asc" | "desc";
 
+// Rows arrive with vote state attached on the server, so the votes column
+// renders from data instead of fetching a summary per row on mount.
+type TableRow = SubmissionWithUser & {
+  voteCount?: number;
+  hasVoted?: boolean;
+};
+
 const PAGE_SIZES = [25, 50, 100] as const;
 
 const STATUS_FILTERS = ["ALL", "OPEN", "IN_PROGRESS", "REVIEW", "COMPLETE", "CANCELED"] as const;
@@ -60,8 +67,8 @@ function prettyAction(action: BulkAction): string {
   }
 }
 
-export default function AdminTable({ submissions }: { submissions: SubmissionWithUser[] }) {
-  const [rows, setRows] = useState<SubmissionWithUser[]>(submissions);
+export default function AdminTable({ submissions }: { submissions: TableRow[] }) {
+  const [rows, setRows] = useState<TableRow[]>(submissions);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<SubmissionType | "ALL">("ALL");
   const [filterStatus, setFilterStatus] = useState<SubmissionStatus | "ALL">("ALL");
@@ -466,7 +473,12 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {s.type === "FEATURE" ? (
-                      <VoteButton submissionId={s.id} size="sm" />
+                      <VoteButton
+                        submissionId={s.id}
+                        initialCount={s.voteCount}
+                        initialHasVoted={s.hasVoted}
+                        size="sm"
+                      />
                     ) : (
                       <span className="text-xs text-zinc-700">—</span>
                     )}

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { getSubmissionStats, listSubmissions } from "@/db/submissions";
+import { countVotesBySubmission, listVotedSubmissionIds } from "@/db/votes";
 import { listUsers } from "@/db/users";
 import Navbar from "@/components/shared/Navbar";
 import AdminTable from "./AdminTable";
@@ -10,6 +11,14 @@ import AdminViewToggle from "./AdminViewToggle";
 import StatsCharts, { type AdminStats } from "@/components/admin/StatsCharts";
 import UserManagement from "@/components/admin/UserManagement";
 import { Bug, Sparkles, Users, Inbox } from "lucide-react";
+import type { SubmissionWithUser } from "@/types";
+
+// Vote state attached on the server and read by the table and kanban views, so
+// their vote buttons render from initial values instead of fetching per row.
+type SubmissionWithVotes = SubmissionWithUser & {
+  voteCount: number;
+  hasVoted: boolean;
+};
 
 export default async function AdminPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -21,6 +30,23 @@ export default async function AdminPage() {
     getSubmissionStats(),
     listUsers(),
   ]);
+
+  // One batched pair of vote queries for both views, instead of one vote
+  // summary request per feature row on the page. Bugs never show a button.
+  const featureIds = submissions
+    .filter((s) => s.type === "FEATURE")
+    .map((s) => s.id);
+
+  const [voteCounts, votedIds] = await Promise.all([
+    countVotesBySubmission(featureIds),
+    listVotedSubmissionIds(featureIds, session.user.id),
+  ]);
+
+  const submissionsWithVotes = submissions.map((submission) => ({
+    ...submission,
+    voteCount: voteCounts.get(submission.id) ?? 0,
+    hasVoted: votedIds.has(submission.id),
+  })) as SubmissionWithVotes[];
 
   const statCards = [
     { label: "Total", value: stats.total, icon: Inbox, color: "text-white" },
@@ -90,8 +116,8 @@ export default async function AdminPage() {
         {/* View toggle + content */}
         <div className="animate-fade-up animate-fade-up-delay-2">
           <AdminViewToggle
-            tableView={<AdminTable submissions={submissions as any} />}
-            kanbanView={<KanbanBoard submissions={submissions as any} />}
+            tableView={<AdminTable submissions={submissionsWithVotes} />}
+            kanbanView={<KanbanBoard submissions={submissionsWithVotes} />}
           />
         </div>
 

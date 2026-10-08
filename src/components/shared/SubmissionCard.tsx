@@ -5,8 +5,16 @@ import VoteButton from "./VoteButton";
 import { Paperclip, Clock } from "lucide-react";
 import type { SubmissionWithUser } from "@/types";
 
+// Server pages attach vote state to each row so listed cards render without a
+// per-card vote request. The fields stay optional: callers that omit them keep
+// VoteButton's one-shot fetch on mount.
+type CardSubmission = SubmissionWithUser & {
+  voteCount?: number;
+  hasVoted?: boolean;
+};
+
 interface SubmissionCardProps {
-  submission: SubmissionWithUser;
+  submission: CardSubmission;
   isAdmin?: boolean;
 }
 
@@ -55,7 +63,14 @@ export default function SubmissionCard({ submission, isAdmin }: SubmissionCardPr
 
       {/* Footer — deliberately outside the Link */}
       <div className="flex items-center gap-3 px-4 py-3 border-t border-zinc-800 text-xs text-zinc-600">
-        {isFeature && <VoteButton submissionId={submission.id} size="sm" />}
+        {isFeature && (
+          <VoteButton
+            submissionId={submission.id}
+            initialCount={submission.voteCount}
+            initialHasVoted={submission.hasVoted}
+            size="sm"
+          />
+        )}
 
         <div className="flex items-center gap-3 ml-auto">
           <span className="flex items-center gap-1">
