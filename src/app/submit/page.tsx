@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/shared/Navbar";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import FileUploadZone from "@/components/shared/FileUploadZone";
-import { Bug, Sparkles, ChevronLeft, Send, Layers } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Bug, Sparkles, ChevronLeft, Send, Layers, Calendar, Copy, Link2 } from "lucide-react";
+import { cn, STATUS_LABELS } from "@/lib/utils";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { StatusBadge } from "@/components/shared/Badges";
+import type { SubmissionStatus } from "@/db/types";
 
 type SubmissionType = "BUG" | "FEATURE";
 type Priority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
@@ -26,6 +28,16 @@ interface UploadedFile {
   };
 }
 
+/** Minimal shape of a possible duplicate — enough to link back to it. */
+interface DuplicateMatch {
+  id: string;
+  title: string;
+  status: string;
+}
+
+const DUPLICATE_MIN_CHARS = 4;
+const DUPLICATE_DEBOUNCE_MS = 400;
+
 export default function SubmitPage() {
   const router = useRouter();
   const [type, setType] = useState<SubmissionType>("BUG");
@@ -33,8 +45,50 @@ export default function SubmitPage() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("MEDIUM");
   const [project, setProject] = useState<Project>("OTHER");
+  const [dueDate, setDueDate] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
+  const [duplicatesDismissed, setDuplicatesDismissed] = useState(false);
+
+  // Background duplicate check on the debounced title. Failures stay silent —
+  // this is a hint, never a gate on submitting.
+  useEffect(() => {
+    const query = title.trim();
+
+    setDuplicatesDismissed(false);
+
+    if (query.length < DUPLICATE_MIN_CHARS) {
+      setDuplicates([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/submissions?search=${encodeURIComponent(query)}&limit=5`, {
+        signal: controller.signal,
+      })
+        .then((res) => (res.ok ? res.json() : { submissions: [] }))
+        .then((data: { submissions?: DuplicateMatch[] }) => {
+          if (controller.signal.aborted) return;
+          setDuplicates(
+            (data.submissions ?? []).map((s) => ({
+              id: s.id,
+              title: s.title,
+              status: s.status,
+            }))
+          );
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setDuplicates([]);
+        });
+    }, DUPLICATE_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [title]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +112,7 @@ export default function SubmitPage() {
           description,
           priority,
           project,
+          ...(dueDate ? { dueDate } : {}),
           attachments: files.map((f) => f.uploaded!).filter(Boolean),
         }),
       });
@@ -110,6 +165,51 @@ export default function SubmitPage() {
           <p className="text-sm text-zinc-500 mb-8">Report a bug or request a new feature</p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Possible duplicates — a warning, never a block */}
+            {duplicates.length > 0 && !duplicatesDismissed && (
+              <div className="bg-zinc-900 border border-amber-500/30 rounded-xl p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-500 text-zinc-100 flex items-center gap-1.5">
+                      <Copy size={13} className="text-amber-400 shrink-0" />
+                      Possible duplicates
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Someone may have already reported this. You can still submit.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDuplicates([]);
+                      setDuplicatesDismissed(true);
+                    }}
+                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors shrink-0 cursor-pointer"
+                  >
+                    Use this title anyway
+                  </button>
+                </div>
+                <ul className="space-y-1">
+                  {duplicates.map((duplicate) => (
+                    <li key={duplicate.id}>
+                      <Link
+                        href={`/submission/${duplicate.id}`}
+                        className="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors min-w-0"
+                      >
+                        <Link2 size={12} className="shrink-0" />
+                        <span className="truncate">{duplicate.title}</span>
+                        {duplicate.status in STATUS_LABELS && (
+                          <span className="shrink-0">
+                            <StatusBadge status={duplicate.status as SubmissionStatus} />
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Type toggle */}
             <div>
               <label className="block text-xs font-500 text-zinc-400 mb-2 uppercase tracking-wider">
@@ -209,6 +309,29 @@ export default function SubmitPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Due date */}
+            <div>
+              <label
+                htmlFor="dueDate"
+                className="block text-xs font-500 text-zinc-400 mb-2 uppercase tracking-wider"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar size={12} />
+                  Due date (optional)
+                </span>
+              </label>
+              <input
+                id="dueDate"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full sm:w-56 bg-zinc-900 border border-zinc-800 focus:border-indigo-500/60 rounded-xl px-4 py-3 text-sm text-zinc-100 outline-none transition-colors cursor-pointer [color-scheme:dark]"
+              />
+              <p className="text-xs text-zinc-600 mt-2">
+                Leave empty if there is no target date.
+              </p>
             </div>
 
             {/* Description */}
