@@ -1,17 +1,67 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { StatusBadge, TypeBadge, PriorityBadge, ProjectBadge } from "@/components/shared/Badges";
+import {
+  StatusBadge,
+  TypeBadge,
+  PriorityBadge,
+  ProjectBadge,
+} from "@/components/shared/Badges";
 import { formatDate, PROJECT_LABELS } from "@/lib/utils";
-import { Search, Paperclip, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import {
+  Search,
+  Paperclip,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  Download,
+} from "lucide-react";
+import AgingBadge from "@/components/admin/AgingBadge";
+import BulkActions, { type BulkAction } from "@/components/admin/BulkActions";
+import SavedViews from "@/components/admin/SavedViews";
+import VoteButton from "@/components/shared/VoteButton";
 import type { SubmissionWithUser } from "@/types";
 import type { Priority, Project, SubmissionStatus, SubmissionType } from "@/db/types";
+import type { SavedViewFilters } from "@/db/views";
+import toast from "react-hot-toast";
 
 type SortKey = "createdAt" | "status" | "type" | "priority" | "title";
 type SortDir = "asc" | "desc";
 
+const PAGE_SIZES = [25, 50, 100] as const;
+
+const STATUS_FILTERS = ["ALL", "OPEN", "IN_PROGRESS", "REVIEW", "COMPLETE", "CANCELED"] as const;
+const TYPE_FILTERS = ["ALL", "BUG", "FEATURE"] as const;
+const PRIORITY_FILTERS = ["ALL", "LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+const PROJECT_FILTERS = [
+  "ALL",
+  "IVALT_MOBILE",
+  "DOCU_ID",
+  "ONDEMAND_ID",
+  "KEYCLOCK",
+  "OTHER",
+] as const;
+
+function prettyAction(action: BulkAction): string {
+  switch (action) {
+    case "status":
+      return "Status updated";
+    case "priority":
+      return "Priority updated";
+    case "archive":
+      return "Archived";
+    case "restore":
+      return "Restored";
+    case "delete":
+      return "Deleted";
+    default:
+      return "Done";
+  }
+}
+
 export default function AdminTable({ submissions }: { submissions: SubmissionWithUser[] }) {
+  const [rows, setRows] = useState<SubmissionWithUser[]>(submissions);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<SubmissionType | "ALL">("ALL");
   const [filterStatus, setFilterStatus] = useState<SubmissionStatus | "ALL">("ALL");
@@ -21,9 +71,12 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
     key: "createdAt",
     dir: "desc",
   });
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState<number>(25);
 
   const filtered = useMemo(() => {
-    return submissions
+    return rows
       .filter((s) => {
         if (filterType !== "ALL" && s.type !== filterType) return false;
         if (filterStatus !== "ALL" && s.status !== filterStatus) return false;
@@ -41,11 +94,24 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
       .sort((a, b) => {
         const dir = sort.dir === "asc" ? 1 : -1;
         if (sort.key === "createdAt") {
-          return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          return (
+            dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+          );
         }
         return dir * String(a[sort.key]).localeCompare(String(b[sort.key]));
       });
-  }, [submissions, search, filterType, filterStatus, filterPriority, filterProject, sort]);
+  }, [rows, search, filterType, filterStatus, filterPriority, filterProject, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const paged = useMemo(
+    () => filtered.slice(safePage * pageSize, safePage * pageSize + pageSize),
+    [filtered, safePage, pageSize],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [search, filterType, filterStatus, filterPriority, filterProject]);
 
   const toggleSort = (key: SortKey) => {
     setSort((prev) =>
@@ -64,71 +130,233 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
     );
   };
 
+  const currentFilters: SavedViewFilters = useMemo(
+    () => ({
+      search: search || undefined,
+      type: filterType !== "ALL" ? filterType : undefined,
+      status: filterStatus !== "ALL" ? filterStatus : undefined,
+      priority: filterPriority !== "ALL" ? filterPriority : undefined,
+      project: filterProject !== "ALL" ? filterProject : undefined,
+      sort: { key: sort.key, dir: sort.dir },
+    }),
+    [search, filterType, filterStatus, filterPriority, filterProject, sort],
+  );
+
+  const applySavedView = (filters: SavedViewFilters) => {
+    setSearch(filters.search ?? "");
+    setFilterType((filters.type as SubmissionType) ?? "ALL");
+    setFilterStatus((filters.status as SubmissionStatus) ?? "ALL");
+    setFilterPriority((filters.priority as Priority) ?? "ALL");
+    setFilterProject((filters.project as Project) ?? "ALL");
+    const key = (filters.sort?.key ?? "createdAt") as SortKey;
+    setSort({ key, dir: filters.sort?.dir ?? "desc" });
+  };
+
+  const exportCSV = () => {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("search", search.trim());
+    if (filterStatus !== "ALL") params.set("status", filterStatus);
+    if (filterType !== "ALL") params.set("type", filterType);
+    if (filterPriority !== "ALL") params.set("priority", filterPriority);
+    if (filterProject !== "ALL") params.set("project", filterProject);
+    window.location.href = `/api/admin/export?${params.toString()}`;
+  };
+
+  const selectedIds = useMemo(() => Array.from(selected), [selected]);
+  const pageIds = useMemo(() => paged.map((s) => s.id), [paged]);
+  const allOnPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+
+  const toggleRow = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllOnPage = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allOnPageSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const handleDispatch = async (action: BulkAction, value?: string) => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    const snapshot = rows;
+
+    setRows((current) =>
+      current
+        .map((s) => {
+          if (!ids.includes(s.id)) return s;
+          if (action === "status") return { ...s, status: value as SubmissionStatus };
+          if (action === "priority") return { ...s, priority: value as Priority };
+          return s;
+        })
+        .filter((s) =>
+          action === "archive" || action === "delete" ? !ids.includes(s.id) : true
+        )
+    );
+    clearSelection();
+
+    try {
+      const res = await fetch("/api/submissions/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action, ...(value ? { value } : {}) }),
+      });
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as { changed?: number };
+      toast.success(
+        `${prettyAction(action)}${data.changed ? ` · ${data.changed} updated` : ""}`,
+      );
+    } catch {
+      setRows(snapshot);
+      toast.error(`Failed to ${action}`);
+    }
+  };
+
+  const selectClass =
+    "cursor-pointer bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-300 outline-none focus:border-indigo-500/60 transition-colors";
+
+  const colSpan = 10;
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
       {/* Filters */}
-      <div className="p-4 border-b border-zinc-800 flex flex-wrap gap-2">
-        <div className="relative flex-1 min-w-[180px]">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search title, user…"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-indigo-500/60 transition-colors"
-          />
-        </div>
+      <div className="p-4 border-b border-zinc-800 space-y-3">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search title, user…"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-indigo-500/60 transition-colors"
+            />
+          </div>
 
-        {(
-          [
-            {
-              label: "Type",
-              value: filterType,
-              onChange: setFilterType,
-              options: ["ALL", "BUG", "FEATURE"],
-              display: (o: string) => o === "ALL" ? "All Types" : o,
-            },
-            {
-              label: "Status",
-              value: filterStatus,
-              onChange: setFilterStatus,
-              options: ["ALL", "OPEN", "IN_PROGRESS", "REVIEW", "COMPLETE", "CANCELED"],
-              display: (o: string) => o === "ALL" ? "All Statuses" : o.replace("_", " "),
-            },
-            {
-              label: "Priority",
-              value: filterPriority,
-              onChange: setFilterPriority,
-              options: ["ALL", "LOW", "MEDIUM", "HIGH", "CRITICAL"],
-              display: (o: string) => o === "ALL" ? "All Priorities" : o,
-            },
-            {
-              label: "Project",
-              value: filterProject,
-              onChange: setFilterProject,
-              options: ["ALL", "IVALT_MOBILE", "DOCU_ID", "ONDEMAND_ID", "KEYCLOCK", "OTHER"],
-              display: (o: string) => o === "ALL" ? "All Projects" : (PROJECT_LABELS[o] ?? o),
-            },
-          ] as const
-        ).map(({ label, value, onChange, options, display }) => (
           <select
-            key={label}
-            value={value}
-            onChange={(e) => onChange(e.target.value as any)}
-            className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-300 outline-none focus:border-indigo-500/60 transition-colors"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as SubmissionType | "ALL")}
+            className={selectClass}
           >
-            {options.map((o) => (
+            {TYPE_FILTERS.map((o) => (
               <option key={o} value={o}>
-                {display(o)}
+                {o === "ALL" ? "All Types" : o}
               </option>
             ))}
           </select>
-        ))}
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as SubmissionStatus | "ALL")}
+            className={selectClass}
+          >
+            {STATUS_FILTERS.map((o) => (
+              <option key={o} value={o}>
+                {o === "ALL" ? "All Statuses" : o.replace("_", " ")}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value as Priority | "ALL")}
+            className={selectClass}
+          >
+            {PRIORITY_FILTERS.map((o) => (
+              <option key={o} value={o}>
+                {o === "ALL" ? "All Priorities" : o}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterProject}
+            onChange={(e) => setFilterProject(e.target.value as Project | "ALL")}
+            className={selectClass}
+          >
+            {PROJECT_FILTERS.map((o) => (
+              <option key={o} value={o}>
+                {o === "ALL" ? "All Projects" : (PROJECT_LABELS[o] ?? o)}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={exportCSV}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/15 px-3 py-1.5 text-sm font-500 text-indigo-300 transition-colors hover:bg-indigo-500/25"
+          >
+            <Download size={13} />
+            Export CSV
+          </button>
+        </div>
+
+        <SavedViews filters={currentFilters} onApply={applySavedView} />
       </div>
 
-      {/* Count */}
-      <div className="px-4 py-2 border-b border-zinc-800/50">
-        <span className="text-xs text-zinc-600">{filtered.length} submission{filtered.length !== 1 ? "s" : ""}</span>
+      {/* Bulk actions */}
+      {selectedIds.length > 0 && (
+        <BulkActions
+          count={selectedIds.length}
+          onDispatch={handleDispatch}
+          onClear={clearSelection}
+        />
+      )}
+
+      {/* Count + pagination */}
+      <div className="px-4 py-2 border-b border-zinc-800/50 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs text-zinc-600">
+          {filtered.length} submission{filtered.length !== 1 ? "s" : ""}
+        </span>
+        <div className="flex items-center gap-2 text-xs text-zinc-500">
+          <label className="flex items-center gap-1.5">
+            <span className="text-zinc-600">Rows</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(0);
+              }}
+              className="cursor-pointer rounded-md border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-300 outline-none focus:border-indigo-500/60"
+            >
+              {PAGE_SIZES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={safePage === 0}
+            className="cursor-pointer rounded-md border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-zinc-300 transition-colors hover:border-zinc-600 disabled:cursor-not-allowed disabled:text-zinc-600"
+          >
+            Prev
+          </button>
+          <span className="tabular-nums">
+            Page {safePage + 1} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={safePage >= totalPages - 1}
+            className="cursor-pointer rounded-md border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-zinc-300 transition-colors hover:border-zinc-600 disabled:cursor-not-allowed disabled:text-zinc-600"
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -136,6 +364,15 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-800">
+              <th className="px-4 py-2.5 w-8">
+                <input
+                  type="checkbox"
+                  checked={allOnPageSelected}
+                  onChange={toggleAllOnPage}
+                  aria-label="Select all on this page"
+                  className="h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+                />
+              </th>
               {[
                 { key: "title" as SortKey, label: "Title" },
                 { key: "type" as SortKey, label: "Type" },
@@ -155,6 +392,9 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
                 </th>
               ))}
               <th className="text-left text-xs font-500 text-zinc-500 px-4 py-2.5 whitespace-nowrap">
+                Votes
+              </th>
+              <th className="text-left text-xs font-500 text-zinc-500 px-4 py-2.5 whitespace-nowrap">
                 Project
               </th>
               <th className="text-left text-xs font-500 text-zinc-500 px-4 py-2.5 whitespace-nowrap">
@@ -164,18 +404,29 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/60">
-            {filtered.length === 0 ? (
+            {paged.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-12 text-zinc-600 text-sm">
+                <td colSpan={colSpan} className="text-center py-12 text-zinc-600 text-sm">
                   No submissions match the current filters
                 </td>
               </tr>
             ) : (
-              filtered.map((s) => (
+              paged.map((s) => (
                 <tr
                   key={s.id}
-                  className="hover:bg-zinc-800/40 transition-colors group"
+                  className={`transition-colors group ${
+                    selected.has(s.id) ? "bg-indigo-500/5" : "hover:bg-zinc-800/40"
+                  }`}
                 >
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(s.id)}
+                      onChange={() => toggleRow(s.id)}
+                      aria-label={`Select ${s.title}`}
+                      className="h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+                    />
+                  </td>
                   <td className="px-4 py-3 max-w-[200px]">
                     <span className="text-zinc-200 line-clamp-1 text-sm">{s.title}</span>
                     {s.attachments.length > 0 && (
@@ -193,8 +444,32 @@ export default function AdminTable({ submissions }: { submissions: SubmissionWit
                   <td className="px-4 py-3 whitespace-nowrap">
                     <StatusBadge status={s.status} />
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-zinc-500">
-                    {formatDate(s.createdAt)}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">
+                        {formatDate(s.createdAt)}
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <AgingBadge
+                          createdAt={s.createdAt}
+                          dueDate={s.dueDate}
+                          status={s.status}
+                          resolvedAt={s.resolvedAt}
+                        />
+                        {s.dueDate && (
+                          <span className="text-[11px] text-zinc-600">
+                            due {formatDate(s.dueDate)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {s.type === "FEATURE" ? (
+                      <VoteButton submissionId={s.id} size="sm" />
+                    ) : (
+                      <span className="text-xs text-zinc-700">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <ProjectBadge project={s.project} />

@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { countSubmissions, countUsers, listSubmissions } from "@/db/submissions";
+import { getSubmissionStats, listSubmissions } from "@/db/submissions";
+import { listUsers } from "@/db/users";
 import Navbar from "@/components/shared/Navbar";
 import AdminTable from "./AdminTable";
 import KanbanBoard from "./KanbanBoard";
 import AdminViewToggle from "./AdminViewToggle";
+import StatsCharts, { type AdminStats } from "@/components/admin/StatsCharts";
+import UserManagement from "@/components/admin/UserManagement";
 import { Bug, Sparkles, Users, Inbox } from "lucide-react";
 
 export default async function AdminPage() {
@@ -13,28 +16,47 @@ export default async function AdminPage() {
   if (!session) redirect("/auth/signin");
   if (session.user.role !== "admin") redirect("/dashboard");
 
-  const [submissions, stats] = await Promise.all([
+  const [submissions, stats, users] = await Promise.all([
     listSubmissions(),
-    Promise.all([
-      countSubmissions(),
-      countSubmissions({ status: "OPEN" }),
-      countSubmissions({ status: "IN_PROGRESS" }),
-      countSubmissions({ type: "BUG" }),
-      countSubmissions({ type: "FEATURE" }),
-      countUsers(),
-    ]),
+    getSubmissionStats(),
+    listUsers(),
   ]);
 
-  const [total, open, inProgress, bugs, features, users] = stats;
-
   const statCards = [
-    { label: "Total", value: total, icon: Inbox, color: "text-white" },
-    { label: "Open", value: open, icon: Inbox, color: "text-blue-400" },
-    { label: "In Progress", value: inProgress, icon: Inbox, color: "text-amber-400" },
-    { label: "Bugs", value: bugs, icon: Bug, color: "text-red-400" },
-    { label: "Features", value: features, icon: Sparkles, color: "text-violet-400" },
-    { label: "Users", value: users, icon: Users, color: "text-emerald-400" },
+    { label: "Total", value: stats.total, icon: Inbox, color: "text-white" },
+    { label: "Open", value: stats.open, icon: Inbox, color: "text-blue-400" },
+    {
+      label: "In Progress",
+      value: stats.inProgress,
+      icon: Inbox,
+      color: "text-amber-400",
+    },
+    { label: "Bugs", value: stats.bugs, icon: Bug, color: "text-red-400" },
+    { label: "Features", value: stats.features, icon: Sparkles, color: "text-violet-400" },
+    { label: "Users", value: stats.users, icon: Users, color: "text-emerald-400" },
   ];
+
+  const chartStats: AdminStats = {
+    total: stats.total,
+    byStatus: {
+      open: stats.open,
+      inProgress: stats.inProgress,
+      review: stats.review,
+      complete: stats.complete,
+      canceled: stats.canceled,
+    },
+    byType: { bugs: stats.bugs, features: stats.features },
+    users: stats.users,
+    archived: stats.archived,
+    overdue: stats.overdue,
+    avgResolutionHours: stats.avgResolutionHours,
+    byProject: stats.byProject.map((row) => ({
+      project: row.project as string,
+      total: row.total,
+      open: row.open,
+    })),
+    trend: stats.trend,
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -60,12 +82,22 @@ export default async function AdminPage() {
           ))}
         </div>
 
+        {/* Charts */}
+        <div className="mb-8 animate-fade-up animate-fade-up-delay-2">
+          <StatsCharts stats={chartStats} />
+        </div>
+
         {/* View toggle + content */}
         <div className="animate-fade-up animate-fade-up-delay-2">
           <AdminViewToggle
             tableView={<AdminTable submissions={submissions as any} />}
             kanbanView={<KanbanBoard submissions={submissions as any} />}
           />
+        </div>
+
+        {/* User management */}
+        <div className="mt-8">
+          <UserManagement users={users} currentUserId={session.user.id} />
         </div>
       </main>
     </div>

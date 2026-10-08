@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutGrid, Table2 } from "lucide-react";
+import Link from "next/link";
+import { Archive, LayoutGrid, Table2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AdminViewToggle({
@@ -21,7 +22,7 @@ export default function AdminViewToggle({
           <button
             onClick={() => setView("table")}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-500 transition-all",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-500 transition-all cursor-pointer",
               view === "table"
                 ? "bg-zinc-700 text-zinc-200"
                 : "text-zinc-500 hover:text-zinc-300"
@@ -33,7 +34,7 @@ export default function AdminViewToggle({
           <button
             onClick={() => setView("kanban")}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-500 transition-all",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-500 transition-all cursor-pointer",
               view === "kanban"
                 ? "bg-zinc-700 text-zinc-200"
                 : "text-zinc-500 hover:text-zinc-300"
@@ -42,6 +43,13 @@ export default function AdminViewToggle({
             <LayoutGrid size={13} />
             Kanban
           </button>
+          <Link
+            href="/admin/archived"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-500 text-zinc-500 hover:text-zinc-300 transition-all cursor-pointer"
+          >
+            <Archive size={13} />
+            Archived
+          </Link>
         </div>
       </div>
 
