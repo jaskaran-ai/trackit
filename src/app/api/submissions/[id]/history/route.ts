@@ -1,27 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { canAccessSubmission, getSessionUser } from "@/lib/api-auth";
-import { listHistory } from "@/db/history";
-import { getSubmissionById } from "@/db/submissions";
+import { NextRequest } from "next/server";
+import { callProcedure } from "@/orpc/rest-adapter";
+import { historyRouter } from "@/orpc/routers/history";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const guard = await getSessionUser();
-  if ("error" in guard) {
-    return NextResponse.json({ error: guard.error }, { status: guard.status });
-  }
+type Params = { params: Promise<{ id: string }> };
 
+/** Adapter over `history.list`. Visible to the owner and admins. */
+export async function GET(req: NextRequest, { params }: Params) {
   const { id } = await params;
 
-  const submission = await getSubmissionById(id);
-  if (!submission) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-  if (!canAccessSubmission(guard.session.user, submission.userId)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const history = await listHistory(id);
-  return NextResponse.json(history);
+  return callProcedure(req, historyRouter.list, { id });
 }
