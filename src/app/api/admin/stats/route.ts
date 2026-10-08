@@ -1,31 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { countSubmissions, countUsers } from "@/db/submissions";
+import { requireAdmin } from "@/lib/api-auth";
+import { getSubmissionStats } from "@/db/submissions";
 
 export async function GET(req: NextRequest) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const guard = await requireAdmin();
+  if ("error" in guard) {
+    return NextResponse.json({ error: guard.error }, { status: guard.status });
   }
 
-  const [total, open, inProgress, review, complete, canceled, bugs, features, users] =
-    await Promise.all([
-      countSubmissions(),
-      countSubmissions({ status: "OPEN" }),
-      countSubmissions({ status: "IN_PROGRESS" }),
-      countSubmissions({ status: "REVIEW" }),
-      countSubmissions({ status: "COMPLETE" }),
-      countSubmissions({ status: "CANCELED" }),
-      countSubmissions({ type: "BUG" }),
-      countSubmissions({ type: "FEATURE" }),
-      countUsers(),
-    ]);
+  const days = Number(new URL(req.url).searchParams.get("days")) || 30;
+  const stats = await getSubmissionStats(days);
 
   return NextResponse.json({
-    total,
-    byStatus: { open, inProgress, review, complete, canceled },
-    byType: { bugs, features },
-    users,
+    total: stats.total,
+    byStatus: {
+      open: stats.open,
+      inProgress: stats.inProgress,
+      review: stats.review,
+      complete: stats.complete,
+      canceled: stats.canceled,
+    },
+    byType: { bugs: stats.bugs, features: stats.features },
+    users: stats.users,
+    archived: stats.archived,
+    overdue: stats.overdue,
+    avgResolutionHours: stats.avgResolutionHours,
+    byProject: stats.byProject,
+    trend: stats.trend,
   });
 }

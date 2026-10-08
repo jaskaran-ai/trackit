@@ -3,29 +3,23 @@
 import { useState } from "react";
 import Link from "next/link";
 import { TypeBadge, PriorityBadge } from "@/components/shared/Badges";
-import { PROJECT_LABELS, STATUS_LABELS } from "@/lib/utils";
+import { PROJECT_LABELS, STATUS_LABELS, STATUS_COLORS } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import AgingBadge from "@/components/admin/AgingBadge";
+import VoteButton from "@/components/shared/VoteButton";
 import toast from "react-hot-toast";
 import type { SubmissionWithUser } from "@/types";
 import type { SubmissionStatus } from "@/db/types";
 import { ChevronRight, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
-const COLUMNS: { status: SubmissionStatus; color: string; dot: string }[] = [
-  { status: "OPEN", color: "border-blue-500/30", dot: "bg-blue-400" },
-  { status: "IN_PROGRESS", color: "border-amber-500/30", dot: "bg-amber-400" },
-  { status: "REVIEW", color: "border-violet-500/30", dot: "bg-violet-400" },
-  { status: "COMPLETE", color: "border-emerald-500/30", dot: "bg-emerald-400" },
-  { status: "CANCELED", color: "border-zinc-600/30", dot: "bg-zinc-500" },
+const COLUMNS: { status: SubmissionStatus; dot: string }[] = [
+  { status: "OPEN", dot: "bg-blue-400" },
+  { status: "IN_PROGRESS", dot: "bg-amber-400" },
+  { status: "REVIEW", dot: "bg-violet-400" },
+  { status: "COMPLETE", dot: "bg-emerald-400" },
+  { status: "CANCELED", dot: "bg-zinc-500" },
 ];
-
-const STATUS_BG: Record<SubmissionStatus, string> = {
-  OPEN: "bg-blue-500/10",
-  IN_PROGRESS: "bg-amber-500/10",
-  REVIEW: "bg-violet-500/10",
-  COMPLETE: "bg-emerald-500/10",
-  CANCELED: "bg-zinc-800/40",
-};
 
 function KanbanCard({
   submission,
@@ -133,6 +127,19 @@ function KanbanCard({
               )}
             </div>
           </div>
+
+          {/* Footer: aging + votes */}
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            <AgingBadge
+              createdAt={submission.createdAt}
+              dueDate={submission.dueDate}
+              status={submission.status}
+              resolvedAt={submission.resolvedAt}
+            />
+            {submission.type === "FEATURE" && (
+              <VoteButton submissionId={submission.id} size="sm" />
+            )}
+          </div>
         </div>
       )}
     </Draggable>
@@ -179,7 +186,7 @@ export default function KanbanBoard({
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
       <div className="flex gap-4 overflow-x-auto pb-4 min-h-[400px]">
-        {COLUMNS.map(({ status, color, dot }) => {
+        {COLUMNS.map(({ status, dot }) => {
           const cards = submissions.filter((s) => s.status === status);
           return (
             <div key={status} className="flex-1 min-w-[220px] max-w-[280px]">
@@ -187,8 +194,7 @@ export default function KanbanBoard({
               <div
                 className={cn(
                   "flex items-center gap-2 mb-3 px-3 py-2 rounded-xl border",
-                  STATUS_BG[status],
-                  color
+                  STATUS_COLORS[status]
                 )}
               >
                 <span className={cn("w-2 h-2 rounded-full", dot)} />

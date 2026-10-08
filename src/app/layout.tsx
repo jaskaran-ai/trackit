@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,14 +8,22 @@ export const metadata: Metadata = {
   description: "Track bugs and feature requests with ease",
 };
 
+/**
+ * Picks the theme before React hydrates so the first paint is already right.
+ * Kept in sync with ThemeProvider's storage key; the class mirrors the `dark`
+ * the server renders, hence suppressHydrationWarning on <html>.
+ */
+const themeScript = `(function(){try{var t=localStorage.getItem("trackit-theme");var r=document.documentElement;r.classList.remove("light","dark");if(t==="light"||t==="dark"){r.classList.add(t);return;}r.classList.add(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");}catch(e){document.documentElement.classList.add("dark");}})()`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -23,14 +32,14 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body bg-zinc-950 text-zinc-100 antialiased min-h-screen">
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
         <Toaster
           position="bottom-right"
           toastOptions={{
             style: {
-              background: "#18181b",
-              color: "#f4f4f5",
-              border: "1px solid #27272a",
+              background: "var(--color-zinc-900)",
+              color: "var(--color-zinc-100)",
+              border: "1px solid var(--color-zinc-800)",
               fontFamily: "var(--font-body)",
               fontSize: "0.875rem",
             },

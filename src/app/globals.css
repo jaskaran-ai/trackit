@@ -1,5 +1,12 @@
 @import 'tailwindcss';
 
+/*
+ * Lets a component opt into a light-only tweak, e.g. `light:border-zinc-200`.
+ * <html> carries `dark` or `light` (see ThemeProvider), so everything under
+ * `.light` is the light theme and everything else stays dark.
+ */
+@custom-variant light (&:where(.light, .light *));
+
 @theme {
   --font-display: "Syne", sans-serif;
   --font-body: "DM Sans", sans-serif;
@@ -10,6 +17,140 @@
 
   --background-image-grid-pattern: linear-gradient(to right, rgba(63,63,70,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(63,63,70,0.3) 1px, transparent 1px);
   --background-size-grid-sm: 24px 24px;
+
+  /*
+   * Neutral ramp, dark theme (the default).
+   *
+   * These are the zinc values the file already hardcodes (scrollbar thumbs,
+   * code blocks, the toast colours) and the values the design tokens mean by
+   * "zinc-950" and friends, written down once so the theme can be switched by
+   * re-pointing variables instead of rewriting every component. The shades
+   * carry meaning and must not be reordered —
+   *   950 page, 900 card, 800 inset, 700 hover, 600 dim, 500 muted,
+   *   400 secondary, 300 body, 200 strong, 100 heading.
+   * Keep these exact values or the dark theme changes.
+   */
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-300: #d4d4d8;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #52525b;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-800: #27272a;
+  --color-zinc-900: #18181b;
+  --color-zinc-950: #09090b;
+
+  /* Accent. Indigo in both themes, one step darker in light (see below). */
+  --color-indigo-300: #a5b4fc;
+  --color-indigo-400: #818cf8;
+  --color-indigo-500: #6366f1;
+  --color-indigo-600: #4f46e5;
+  --color-indigo-700: #4338ca;
+
+  /* Status hues, shared by the badges in lib/utils. */
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-violet-300: #c4b5fd;
+  --color-violet-400: #a78bfa;
+  --color-violet-500: #8b5cf6;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-orange-300: #fdba74;
+  --color-orange-400: #fb923c;
+  --color-orange-500: #f97316;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+
+  --color-white: #ffffff;
+}
+
+/*
+ * Light theme.
+ *
+ * Applied by adding `.light` to <html>, so the zinc utilities the components
+ * already use resolve to light values. The ramp is the dark one mirrored:
+ * 950<->100, 900 becomes white, 800<->200, 700<->300, 600<->400, 500 stays.
+ * Every step keeps the same contrast against its background, so the hierarchy
+ * reads identically in both themes.
+ *
+ * Two rules are needed because two utilities were hardcoded for dark
+ * surfaces and cannot be edited component side:
+ *   - `--color-white` flips, so `text-white` headings and labels turn dark
+ *     (coloured fills opt back in below).
+ *   - The sign-in page pairs `bg-white` with `text-zinc-900`.
+ */
+html.light {
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #18181b;
+  --color-zinc-200: #27272a;
+  --color-zinc-300: #3f3f46;
+  --color-zinc-400: #52525b;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #a1a1aa;
+  --color-zinc-700: #d4d4d8;
+  --color-zinc-800: #e4e4e7;
+  --color-zinc-900: #ffffff;
+  --color-zinc-950: #f4f4f5;
+
+  --color-indigo-300: #4338ca;
+  --color-indigo-400: #4f46e5;
+  --color-indigo-500: #4f46e5;
+  --color-indigo-600: #4338ca;
+  --color-indigo-700: #3730a3;
+
+  --color-blue-300: #1d4ed8;
+  --color-blue-400: #2563eb;
+  --color-blue-500: #2563eb;
+  --color-amber-300: #b45309;
+  --color-amber-400: #b45309;
+  --color-amber-500: #b45309;
+  --color-violet-300: #6d28d9;
+  --color-violet-400: #7c3aed;
+  --color-violet-500: #7c3aed;
+  --color-emerald-300: #047857;
+  --color-emerald-400: #047857;
+  --color-emerald-500: #047857;
+  --color-orange-300: #c2410c;
+  --color-orange-400: #c2410c;
+  --color-orange-500: #c2410c;
+  --color-red-300: #b91c1c;
+  --color-red-400: #dc2626;
+  --color-red-500: #dc2626;
+  --color-red-600: #b91c1c;
+
+  --color-white: #18181b;
+}
+
+/* Filled controls keep real white labels, now over a darker indigo/red. */
+html.light .bg-indigo-500.text-white,
+html.light .bg-indigo-600.text-white,
+html.light .bg-red-500.text-white,
+html.light .bg-red-600.text-white {
+  color: #ffffff;
+}
+
+/* ...and real white spinner arcs inside those controls. */
+html.light .bg-indigo-500 :is(.border-white\/30, .border-t-white),
+html.light .bg-red-500 :is(.border-white\/30, .border-t-white) {
+  border-color: #ffffff;
+}
+
+/* The sign-in page paints its Google button white with zinc-900 text. */
+html.light .bg-white {
+  background-color: #ffffff;
+}
+
+html.light .bg-white.text-zinc-900 {
+  color: var(--color-zinc-100);
 }
 
 * {
@@ -82,7 +223,7 @@ body {
 }
 
 .tiptap-editor code {
-  background: #27272a;
+  background: var(--color-zinc-800);
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.875em;
@@ -90,8 +231,8 @@ body {
 }
 
 .tiptap-editor pre {
-  background: #18181b;
-  border: 1px solid #27272a;
+  background: var(--color-zinc-900);
+  border: 1px solid var(--color-zinc-800);
   border-radius: 8px;
   padding: 1rem;
   margin: 0.75rem 0;
@@ -104,7 +245,7 @@ body {
 }
 
 .tiptap-editor a {
-  color: #818cf8;
+  color: var(--color-indigo-400);
   text-decoration: underline;
 }
 
@@ -122,7 +263,7 @@ body {
 .tiptap-editor p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
-  color: #52525b;
+  color: var(--color-zinc-600);
   pointer-events: none;
   height: 0;
 }
@@ -133,20 +274,20 @@ body {
 .prose-dark li { margin: 0.25rem 0; }
 .prose-dark strong { font-weight: 600; }
 .prose-dark code {
-  background: #27272a;
+  background: var(--color-zinc-800);
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.875em;
 }
 .prose-dark pre {
-  background: #18181b;
-  border: 1px solid #27272a;
+  background: var(--color-zinc-900);
+  border: 1px solid var(--color-zinc-800);
   border-radius: 8px;
   padding: 1rem;
   overflow-x: auto;
   margin: 0.75rem 0;
 }
-.prose-dark a { color: #818cf8; text-decoration: underline; }
+.prose-dark a { color: var(--color-indigo-400); text-decoration: underline; }
 .prose-dark h1, .prose-dark h2, .prose-dark h3 {
   font-family: var(--font-display);
   font-weight: 700;
@@ -173,3 +314,15 @@ body {
 .animate-fade-up-delay-2 { animation-delay: 0.1s; opacity: 0; }
 .animate-fade-up-delay-3 { animation-delay: 0.15s; opacity: 0; }
 .animate-fade-up-delay-4 { animation-delay: 0.2s; opacity: 0; }
+
+/* Respect the OS "reduce motion" setting for every entrance animation. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-up-delay-1,
+  .animate-fade-up-delay-2,
+  .animate-fade-up-delay-3,
+  .animate-fade-up-delay-4 {
+    animation: none;
+    opacity: 1;
+  }
+}

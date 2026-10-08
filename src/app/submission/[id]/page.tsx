@@ -4,48 +4,13 @@ import { headers } from "next/headers";
 import { getSubmissionById } from "@/db/submissions";
 import Navbar from "@/components/shared/Navbar";
 import { StatusBadge, TypeBadge, PriorityBadge } from "@/components/shared/Badges";
-import { formatDate, formatBytes } from "@/lib/utils";
-import { ChevronLeft, Paperclip, Download, FileText, Film } from "lucide-react";
+import VoteButton from "@/components/shared/VoteButton";
+import { formatDate } from "@/lib/utils";
+import { ChevronLeft, Paperclip } from "lucide-react";
 import Link from "next/link";
-
-function FilePreview({ att }: { att: any }) {
-  const isImage = att.mimeType.startsWith("image/");
-  const isPDF = att.mimeType === "application/pdf";
-  const isVideo = att.mimeType.startsWith("video/");
-
-  return (
-    <a
-      href={att.fileUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center gap-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-2.5 transition-all group"
-    >
-      {isImage ? (
-        <img
-          src={att.fileUrl}
-          alt={att.fileName}
-          className="w-8 h-8 rounded-md object-cover shrink-0"
-          loading="lazy"
-        />
-      ) : (
-        <div className="w-8 h-8 bg-zinc-800 rounded-md flex items-center justify-center shrink-0">
-          {isPDF ? (
-            <FileText size={15} className="text-red-400" />
-          ) : isVideo ? (
-            <Film size={15} className="text-violet-400" />
-          ) : (
-            <FileText size={15} className="text-zinc-400" />
-          )}
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-zinc-200 truncate">{att.fileName}</p>
-        <p className="text-xs text-zinc-600">{formatBytes(att.fileSize)}</p>
-      </div>
-      <Download size={13} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-    </a>
-  );
-}
+import AttachmentList from "@/components/submission/AttachmentList";
+import StatusHistory from "@/components/submission/StatusHistory";
+import CommentsSection from "@/components/submission/CommentsSection";
 
 export default async function SubmissionDetailPage({
   params,
@@ -84,7 +49,12 @@ export default async function SubmissionDetailPage({
               <h1 className="font-display text-xl font-700 text-white leading-snug flex-1">
                 {submission.title}
               </h1>
-              <StatusBadge status={submission.status} />
+              <div className="flex items-center gap-2 shrink-0">
+                <StatusBadge status={submission.status} />
+                {submission.type === "FEATURE" && (
+                  <VoteButton submissionId={submission.id} size="md" />
+                )}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-5">
@@ -124,18 +94,24 @@ export default async function SubmissionDetailPage({
 
           {/* Attachments */}
           {submission.attachments.length > 0 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-4">
               <h2 className="font-display text-sm font-600 text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <Paperclip size={13} />
                 Attachments ({submission.attachments.length})
               </h2>
-              <div className="space-y-2">
-                {submission.attachments.map((att) => (
-                  <FilePreview key={att.id} att={att} />
-                ))}
-              </div>
+              <AttachmentList attachments={submission.attachments} />
             </div>
           )}
+
+          {/* Audit trail */}
+          <StatusHistory submissionId={submission.id} />
+
+          {/* Discussion */}
+          <CommentsSection
+            submissionId={submission.id}
+            currentUserId={session.user.id}
+            isAdmin={isAdmin}
+          />
         </div>
       </main>
     </div>
