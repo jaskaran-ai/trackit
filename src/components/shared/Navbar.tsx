@@ -3,15 +3,28 @@
 import { useSession, signOut } from "@/lib/auth-client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bug, Plus, LayoutDashboard, ShieldCheck, LogOut, ChevronDown } from "lucide-react";
+import {
+  Bug,
+  Plus,
+  LayoutDashboard,
+  ShieldCheck,
+  LogOut,
+  ChevronDown,
+  Settings,
+  Bell,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import BrandLogo from "@/components/shared/BrandLogo";
+import NotificationBell from "@/components/layout/NotificationBell";
+import ThemeToggle, { ThemeSegmentedControl } from "@/components/theme/ThemeToggle";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import { useState } from "react";
 
 export default function Navbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
   const isAdmin = session?.user?.role === "admin";
 
   const navLinks = [
@@ -56,12 +69,21 @@ export default function Navbar() {
             <span className="hidden sm:block">New</span>
           </Link>
 
+          {/* Notifications and theme. The cluster has to survive 320px, so
+              both collapse into the user menu below `sm`. */}
+          <div className="hidden sm:flex items-center gap-1">
+            <NotificationBell />
+            <ThemeToggle />
+          </div>
+
           {/* User menu */}
           {session?.user && (
             <div className="relative">
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+                aria-expanded={menuOpen}
+                aria-label="User menu"
+                className="flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 {session.user.image ? (
                   <img
@@ -106,11 +128,38 @@ export default function Navbar() {
                           <Icon size={14} /> {label}
                         </Link>
                       ))}
+
+                      <Link
+                        href="/notifications"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+                      >
+                        <Bell size={14} /> Notifications
+                      </Link>
+
+                      {/* Theme switch, mirroring the one in the cluster above */}
+                      <div className="px-3 py-2">
+                        <p className="text-xs text-zinc-500 mb-1.5">Theme</p>
+                        <ThemeSegmentedControl
+                          value={theme}
+                          onChange={setTheme}
+                          className="w-full"
+                        />
+                      </div>
                     </div>
+
+                    <Link
+                      href="/settings"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+                    >
+                      <Settings size={14} />
+                      Settings
+                    </Link>
 
                     <button
                       onClick={() => signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/auth/signin"; } } })}
-                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-zinc-400 hover:text-red-400 hover:bg-zinc-800 transition-colors"
+                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-zinc-400 hover:text-red-400 hover:bg-zinc-800 transition-colors cursor-pointer"
                     >
                       <LogOut size={14} />
                       Sign out
