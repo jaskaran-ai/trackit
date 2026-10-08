@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { listSubmissions } from "@/db/submissions";
 import Navbar from "@/components/shared/Navbar";
-import SubmissionCard from "@/components/shared/SubmissionCard";
+import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import Link from "next/link";
 import { Plus, Bug, Sparkles, Inbox } from "lucide-react";
 import type { SubmissionWithUser } from "@/types";
@@ -78,11 +78,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-fade-up animate-fade-up-delay-2">
-            {(submissions as SubmissionWithUser[]).map((submission) => (
-              <SubmissionCard key={submission.id} submission={submission} />
-            ))}
-          </div>
+          <DashboardFilters submissions={submissions as SubmissionWithUser[]} />
         )}
       </main>
     </div>
