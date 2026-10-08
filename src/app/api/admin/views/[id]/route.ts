@@ -1,22 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
-import { deleteSavedView } from "@/db/views";
+import { NextRequest } from "next/server";
+import { callProcedure } from "@/orpc/rest-adapter";
+import { adminRouter } from "@/orpc/routers/admin";
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const guard = await requireAdmin();
-  if ("error" in guard) {
-    return NextResponse.json({ error: guard.error }, { status: guard.status });
-  }
+type Params = { params: Promise<{ id: string }> };
 
+/** Adapter over `admin.deleteView`, path variant. Admin only. */
+export async function DELETE(req: NextRequest, { params }: Params) {
   const { id } = await params;
 
-  const deleted = await deleteSavedView(id, guard.session.user.id);
-  if (!deleted) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ success: true });
+  return callProcedure(req, adminRouter.deleteView, { id });
 }
