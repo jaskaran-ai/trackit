@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
@@ -10,53 +10,30 @@ import {
   NotificationRow,
   type NotificationWithSubmission,
 } from "@/components/layout/NotificationList";
-
-const POLL_MS = 45000;
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from "@/hooks/use-notifications";
 
 export default function NotificationBell() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
 
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<NotificationWithSubmission[]>([]);
-  const [unread, setUnread] = useState(0);
-  const [saving, setSaving] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notifications", { cache: "no-store" });
-      if (!res.ok) return;
+  const notifications = useNotifications(Boolean(session?.user));
+  const markRead = useMarkNotificationRead();
+  const markAll = useMarkAllNotificationsRead();
 
-      const data: {
-        notifications?: NotificationWithSubmission[];
-        unread?: number;
-      } = await res.json();
+  const items = notifications.data?.notifications ?? [];
+  const unread = notifications.data?.unread ?? 0;
 
-      setItems(data.notifications ?? []);
-      setUnread(data.unread ?? 0);
-    } catch {
-      // Keep the last good list rather than flashing an empty panel.
-    }
-  }, []);
-
-  // Poll, but stay quiet while the tab is in the background.
+  // Fresh rows whenever the panel opens.
   useEffect(() => {
-    if (!session?.user) return;
-
-    void load();
-
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") void load();
-    }, POLL_MS);
-
-    return () => window.clearInterval(interval);
-  }, [load, session?.user]);
-
-  // Fresh data whenever the panel opens.
-  useEffect(() => {
-    if (open) void load();
-  }, [open, load]);
+    if (open) void notifications.refetch();
+  }, [open, notifications.refetch]);
 
   // Outside click and Escape close the panel.
   useEffect(() => {
@@ -78,38 +55,20 @@ export default function NotificationBell() {
     };
   }, [open]);
 
-  const markRead = async (item: NotificationWithSubmission) => {
+  const handleMarkRead = (item: NotificationWithSubmission) => {
     setOpen(false);
 
     if (item.read || !item.submissionId) return;
 
-    // Optimistic, the navigation is already on its way.
-    setItems((current) =>
-      current.map((entry) => (entry.id === item.id ? { ...entry, read: true } : entry)),
-    );
-    setUnread((count) => Math.max(0, count - 1));
-
-    try {
-      await fetch(`/api/notifications?id=${item.id}`, { method: "POST" });
-    } catch {
-      // A missed write is not worth interrupting the navigation.
-    }
+    // The cache flips before the POST resolves; a failure reverts it.
+    void markRead.mutate(item.id);
   };
 
-  const markAllRead = async () => {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/notifications?all=true", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to update");
-
-      setItems((current) => current.map((item) => ({ ...item, read: true })));
-      setUnread(0);
-      toast.success("All notifications marked as read");
-    } catch {
-      toast.error("Could not update notifications");
-    } finally {
-      setSaving(false);
-    }
+  const handleMarkAllRead = () => {
+    markAll.mutate(undefined, {
+      onSuccess: () => toast.success("All notifications marked as read"),
+      onError: () => toast.error("Could not update notifications"),
+    });
   };
 
   if (!session?.user) return null;
@@ -166,7 +125,7 @@ export default function NotificationBell() {
                     href={
                       item.submissionId ? submissionHref(item.submissionId) : undefined
                     }
-                    onSelect={() => void markRead(item)}
+                    onSelect={() => handleMarkRead(item)}
                   />
                 </li>
               ))}
@@ -177,17 +136,17 @@ export default function NotificationBell() {
           <div className="flex items-center border-t border-zinc-800">
             <button
               type="button"
-              onClick={markAllRead}
-              disabled={saving || unread === 0}
+              onClick={handleMarkAllRead}
+              disabled={markAll.isPending || unread === 0}
               className={cn(
                 "flex-1 flex items-center justify-center gap-1.5 h-10 text-xs font-500 transition-colors",
-                saving || unread === 0
+                markAll.isPending || unread === 0
                   ? "text-zinc-600 cursor-not-allowed"
                   : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 cursor-pointer",
               )}
             >
               <CheckCheck size={13} />
-              {saving ? "Updating…" : "Mark all read"}
+              {markAll.isPending ? "Updating…" : "Mark all read"}
             </button>
 
             <div className="w-px h-6 bg-zinc-800" />

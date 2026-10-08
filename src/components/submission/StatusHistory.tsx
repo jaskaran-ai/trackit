@@ -1,28 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { History } from "lucide-react";
 import { cn, formatDate, STATUS_LABELS } from "@/lib/utils";
 import { PriorityBadge, StatusBadge } from "@/components/shared/Badges";
 import type { Priority, SubmissionStatus } from "@/db/types";
-
-interface HistoryActor {
-  id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
-}
-
-interface HistoryEntry {
-  id: string;
-  submissionId: string;
-  changedById: string | null;
-  field: string;
-  fromValue: string | null;
-  toValue: string | null;
-  createdAt: string;
-  changedBy: HistoryActor | null;
-}
+import { useSubmissionHistory, type HistoryEntry } from "@/hooks/use-status-history";
 
 /** Fields that only carry a payload in toValue (no before/after pair). */
 const EVENT_FIELDS = new Set(["created", "archived", "restored"]);
@@ -98,24 +80,8 @@ function Detail({ entry }: { entry: HistoryEntry }) {
 }
 
 export default function StatusHistory({ submissionId }: { submissionId: string }) {
-  const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    fetch(`/api/submissions/${submissionId}/history`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data: HistoryEntry[]) => {
-        if (active) setEntries(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (active) setEntries([]);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [submissionId]);
+  const historyQuery = useSubmissionHistory(submissionId);
+  const entries = historyQuery.data;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-4">
@@ -124,7 +90,7 @@ export default function StatusHistory({ submissionId }: { submissionId: string }
         History
       </h2>
 
-      {entries === null ? (
+      {entries === undefined ? (
         <div className="space-y-4 animate-pulse">
           {[0, 1].map((i) => (
             <div key={i} className="flex gap-3">

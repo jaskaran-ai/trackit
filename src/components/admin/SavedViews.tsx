@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Bookmark, BookmarkPlus, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { SavedViewFilters } from "@/db/views";
-
-type SavedView = {
-  id: string;
-  name: string;
-  filters: SavedViewFilters;
-};
+import {
+  useCreateSavedView,
+  useDeleteSavedView,
+  useSavedViews,
+  type SavedViewListItem as SavedView,
+} from "@/hooks/use-saved-views";
 
 export default function SavedViews({
   filters,
@@ -19,63 +19,37 @@ export default function SavedViews({
   filters: SavedViewFilters;
   onApply: (filters: SavedViewFilters) => void;
 }) {
-  const [views, setViews] = useState<SavedView[]>([]);
-  const [loading, setLoading] = useState(true);
+  const viewsQuery = useSavedViews();
+  const createView = useCreateSavedView();
+  const deleteView = useDeleteSavedView();
+
+  const views = viewsQuery.data ?? [];
+  const loading = viewsQuery.isPending;
+
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/admin/views");
-      if (!res.ok) throw new Error();
-      const data = (await res.json()) as SavedView[];
-      setViews(Array.isArray(data) ? data : []);
-    } catch {
-      // Saved views are a convenience — silence failures.
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleSave = async () => {
+  const handleSave = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    setSaving(true);
-    try {
-      const res = await fetch("/api/admin/views", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed, filters }),
-      });
-      if (!res.ok) throw new Error();
-      const created = (await res.json()) as SavedView;
-      setViews((prev) => [...prev, created]);
-      setName("");
-      setNaming(false);
-      toast.success("View saved");
-    } catch {
-      toast.error("Could not save view");
-    } finally {
-      setSaving(false);
-    }
+    createView.mutate(
+      { name: trimmed, filters },
+      {
+        onSuccess: () => {
+          setName("");
+          setNaming(false);
+          toast.success("View saved");
+        },
+        onError: () => toast.error("Could not save view"),
+      },
+    );
   };
 
-  const handleDelete = async (id: string) => {
-    const previous = views;
-    setViews((prev) => prev.filter((v) => v.id !== id));
-    try {
-      const res = await fetch(`/api/admin/views/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
-      toast.success("View deleted");
-    } catch {
-      setViews(previous);
-      toast.error("Could not delete view");
-    }
+  const handleDelete = (id: string) => {
+    deleteView.mutate(id, {
+      onSuccess: () => toast.success("View deleted"),
+      onError: () => toast.error("Could not delete view"),
+    });
   };
 
   return (
@@ -129,10 +103,10 @@ export default function SavedViews({
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving || !name.trim()}
+            disabled={createView.isPending || !name.trim()}
             className={cn(
               "cursor-pointer rounded-md p-1 transition-colors",
-              saving || !name.trim()
+              createView.isPending || !name.trim()
                 ? "text-zinc-600"
                 : "text-emerald-400 hover:text-emerald-300"
             )}
