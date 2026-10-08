@@ -24,10 +24,12 @@ interface Comment {
 
 export default function CommentsSection({
   submissionId,
-  canModerate = false,
+  currentUserId,
+  isAdmin = false,
 }: {
   submissionId: string;
-  canModerate?: boolean;
+  currentUserId?: string;
+  isAdmin?: boolean;
 }) {
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [body, setBody] = useState("");
@@ -185,8 +187,8 @@ export default function CommentsSection({
                   </span>
                   <span className="text-xs text-zinc-600">{formatDate(comment.createdAt)}</span>
 
-                  {/* The API is the source of truth for who may delete. */}
-                  {canModerate && (
+                  {/* Author or admin only — mirrors the API's delete rule. */}
+                  {(comment.userId === currentUserId || isAdmin) && (
                     <button
                       type="button"
                       onClick={() => handleDelete(comment.id)}

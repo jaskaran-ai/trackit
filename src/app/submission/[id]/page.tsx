@@ -109,7 +109,8 @@ export default async function SubmissionDetailPage({
           {/* Discussion */}
           <CommentsSection
             submissionId={submission.id}
-            canModerate={isAdmin || isOwner}
+            currentUserId={session.user.id}
+            isAdmin={isAdmin}
           />
         </div>
       </main>
