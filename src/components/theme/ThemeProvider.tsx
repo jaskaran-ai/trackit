@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useThemePreferences } from "@/hooks/use-theme-preferences";
 
 export type ThemePreference = "dark" | "light" | "system";
 export type ResolvedTheme = "dark" | "light";
@@ -64,6 +65,7 @@ function applyTheme(resolved: ResolvedTheme) {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(readStoredTheme);
   const [systemResolved, setSystemResolved] = useState<ResolvedTheme>(systemTheme);
+  const { data: preferences } = useThemePreferences();
 
   const resolvedTheme: ResolvedTheme = theme === "system" ? systemResolved : theme;
 
@@ -88,36 +90,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [resolvedTheme]);
 
   // First paint comes from localStorage (see the inline script), so the
-  // database only has to reconcile once, when the session is known.
+  // database only has to reconcile once, when the stored row arrives.
   useEffect(() => {
-    let cancelled = false;
+    const stored = preferences?.theme;
+    if (!isTheme(stored)) return;
 
-    fetch(PREFERENCES_URL, { headers: { Accept: "application/json" } })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { theme?: unknown } | null) => {
-        if (cancelled || !data) return;
-
-        const stored = data.theme;
-        if (!isTheme(stored)) return;
-
-        setThemeState((current) => {
-          if (current === stored) return current;
-          try {
-            window.localStorage.setItem(STORAGE_KEY, stored);
-          } catch {
-            // Storage is optional; the class is applied from state anyway.
-          }
-          return stored;
-        });
-      })
-      .catch(() => {
-        // Offline or signed out — keep the local choice.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    setThemeState((current) => {
+      if (current === stored) return current;
+      try {
+        window.localStorage.setItem(STORAGE_KEY, stored);
+      } catch {
+        // Storage is optional; the class is applied from state anyway.
+      }
+      return stored;
+    });
+  }, [preferences]);
 
   const setTheme = useCallback((next: ThemePreference) => {
     // Apply immediately, then persist. A failed write leaves the local choice

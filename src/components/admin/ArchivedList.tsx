@@ -6,6 +6,11 @@ import { StatusBadge, TypeBadge, ProjectBadge } from "@/components/shared/Badges
 import { cn, formatDate } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { SubmissionWithUser } from "@/types";
+import {
+  useArchivedSubmissions,
+  useDeleteArchivedSubmission,
+  useRestoreArchivedSubmission,
+} from "@/hooks/use-archived-submissions";
 
 function ArchivedRow({
   submission,
@@ -88,11 +93,16 @@ export default function ArchivedList({
 }: {
   submissions: SubmissionWithUser[];
 }) {
-  const [rows, setRows] = useState<SubmissionWithUser[]>(submissions);
+  const archived = useArchivedSubmissions(submissions);
+  const restore = useRestoreArchivedSubmission();
+  const destroy = useDeleteArchivedSubmission();
+
+  const rows = archived.data;
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const resetTimer = useRef<number | null>(null);
 
+  // The confirm window is a timer, so drop it with the component.
   useEffect(
     () => () => {
       if (resetTimer.current) window.clearTimeout(resetTimer.current);
@@ -108,39 +118,23 @@ export default function ArchivedList({
     }, 3000);
   };
 
-  const handleRestore = async (id: string) => {
-    const snapshot = rows;
-    setRows((prev) => prev.filter((s) => s.id !== id));
+  const handleRestore = (id: string) => {
     setBusyId(id);
-    try {
-      const res = await fetch(`/api/submissions/${id}`, { method: "POST" });
-      if (!res.ok) throw new Error();
-      toast.success("Submission restored");
-    } catch {
-      setRows(snapshot);
-      toast.error("Could not restore submission");
-    } finally {
-      setBusyId(null);
-    }
+    restore.mutate(id, {
+      onSuccess: () => toast.success("Submission restored"),
+      onError: () => toast.error("Could not restore submission"),
+      onSettled: () => setBusyId(null),
+    });
   };
 
-  const handleDeletePermanent = async (id: string) => {
-    const snapshot = rows;
-    setRows((prev) => prev.filter((s) => s.id !== id));
+  const handleDeletePermanent = (id: string) => {
     setConfirmDeleteId(null);
     setBusyId(id);
-    try {
-      const res = await fetch(`/api/submissions/${id}?permanent=true`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error();
-      toast.success("Deleted permanently");
-    } catch {
-      setRows(snapshot);
-      toast.error("Could not delete submission");
-    } finally {
-      setBusyId(null);
-    }
+    destroy.mutate(id, {
+      onSuccess: () => toast.success("Deleted permanently"),
+      onError: () => toast.error("Could not delete submission"),
+      onSettled: () => setBusyId(null),
+    });
   };
 
   if (rows.length === 0) {

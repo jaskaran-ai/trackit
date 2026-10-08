@@ -1,26 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { MessageSquare, Send, Trash2 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import toast from "react-hot-toast";
-
-interface CommentAuthor {
-  id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
-}
-
-interface Comment {
-  id: string;
-  body: string;
-  submissionId: string;
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
-  user: CommentAuthor;
-}
+import {
+  useComments,
+  useCreateComment,
+  useDeleteComment,
+  type CommentWithUser as Comment,
+} from "@/hooks/use-comments";
 
 export default function CommentsSection({
   submissionId,
@@ -31,29 +20,15 @@ export default function CommentsSection({
   currentUserId?: string;
   isAdmin?: boolean;
 }) {
-  const [comments, setComments] = useState<Comment[] | null>(null);
+  const commentsQuery = useComments(submissionId);
+  const postComment = useCreateComment(submissionId);
+  const removeComment = useDeleteComment(submissionId);
+
+  const comments = commentsQuery.data;
   const [body, setBody] = useState("");
-  const [posting, setPosting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-
-    fetch(`/api/submissions/${submissionId}/comments`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data: Comment[]) => {
-        if (active) setComments(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (active) setComments([]);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [submissionId]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const text = body.trim();
@@ -62,48 +37,25 @@ export default function CommentsSection({
       return;
     }
 
-    setPosting(true);
-    try {
-      const res = await fetch(`/api/submissions/${submissionId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: text }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error ?? "Could not post comment");
-      }
-
-      const created = (await res.json()) as Comment;
-      setComments((prev) => (prev ? [...prev, created] : [created]));
-      setBody("");
-      toast.success("Comment posted");
-    } catch (err: any) {
-      toast.error(err.message ?? "Could not post comment");
-    } finally {
-      setPosting(false);
-    }
+    postComment.mutate(text, {
+      onSuccess: () => {
+        setBody("");
+        toast.success("Comment posted");
+      },
+      onError: (error) => toast.error(error.message ?? "Could not post comment"),
+    });
   };
 
-  const handleDelete = async (commentId: string) => {
+  const handleDelete = (commentId: string) => {
     setDeletingId(commentId);
-    try {
-      const res = await fetch(
-        `/api/submissions/${submissionId}/comments/${commentId}`,
-        { method: "DELETE" }
-      );
-      if (!res.ok) throw new Error("Could not delete comment");
-
-      setComments((prev) => (prev ? prev.filter((c) => c.id !== commentId) : prev));
-      toast.success("Comment deleted");
-    } catch (err: any) {
-      toast.error(err.message ?? "Could not delete comment");
-    } finally {
-      setDeletingId(null);
-    }
+    removeComment.mutate(commentId, {
+      onSuccess: () => toast.success("Comment deleted"),
+      onError: (error) => toast.error(error.message ?? "Could not delete comment"),
+      onSettled: () => setDeletingId(null),
+    });
   };
 
-  const canPost = body.trim().length > 0 && !posting;
+  const canPost = body.trim().length > 0 && !postComment.isPending;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
@@ -144,13 +96,13 @@ export default function CommentsSection({
             )}
           >
             <Send size={13} />
-            {posting ? "Posting…" : "Post comment"}
+            {postComment.isPending ? "Posting…" : "Post comment"}
           </button>
         </div>
       </form>
 
       {/* List */}
-      {comments === null ? (
+      {comments === undefined ? (
         <div className="space-y-4 animate-pulse">
           {[0, 1].map((i) => (
             <div key={i} className="flex gap-3">
