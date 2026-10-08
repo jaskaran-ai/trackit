@@ -2,17 +2,43 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { listSubmissions } from "@/db/submissions";
+import { countVotesBySubmission, listVotedSubmissionIds } from "@/db/votes";
 import Navbar from "@/components/shared/Navbar";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import Link from "next/link";
 import { Plus, Bug, Sparkles, Inbox } from "lucide-react";
 import type { SubmissionWithUser } from "@/types";
 
+// Vote state attached on the server and read by SubmissionCard, which passes it
+// to VoteButton as initial values so no card fetches its summary on mount.
+type SubmissionWithVotes = SubmissionWithUser & {
+  voteCount: number;
+  hasVoted: boolean;
+};
+
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/auth/signin");
 
   const submissions = await listSubmissions({ userId: session.user.id });
+
+  // One batched pair of vote queries per page load. Counting inside each card
+  // would fire a GET /api/submissions/[id]/vote request per feature row, and
+  // only features render a vote button, so only their ids are queried.
+  const featureIds = submissions
+    .filter((s) => s.type === "FEATURE")
+    .map((s) => s.id);
+
+  const [voteCounts, votedIds] = await Promise.all([
+    countVotesBySubmission(featureIds),
+    listVotedSubmissionIds(featureIds, session.user.id),
+  ]);
+
+  const submissionsWithVotes = submissions.map((submission) => ({
+    ...submission,
+    voteCount: voteCounts.get(submission.id) ?? 0,
+    hasVoted: votedIds.has(submission.id),
+  })) as SubmissionWithVotes[];
 
   const bugs = submissions.filter((s) => s.type === "BUG");
   const features = submissions.filter((s) => s.type === "FEATURE");
@@ -78,7 +104,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <DashboardFilters submissions={submissions as SubmissionWithUser[]} />
+          <DashboardFilters submissions={submissionsWithVotes} />
         )}
       </main>
     </div>

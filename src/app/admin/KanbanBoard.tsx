@@ -21,12 +21,19 @@ const COLUMNS: { status: SubmissionStatus; dot: string }[] = [
   { status: "CANCELED", dot: "bg-zinc-500" },
 ];
 
+// Submissions arrive with vote state attached on the server, so a card's vote
+// button renders from initial values instead of fetching each one on mount.
+type KanbanSubmission = SubmissionWithUser & {
+  voteCount?: number;
+  hasVoted?: boolean;
+};
+
 function KanbanCard({
   submission,
   onStatusChange,
   index,
 }: {
-  submission: SubmissionWithUser;
+  submission: KanbanSubmission;
   onStatusChange: (id: string, status: SubmissionStatus) => void;
   index: number;
 }) {
@@ -137,7 +144,12 @@ function KanbanCard({
               resolvedAt={submission.resolvedAt}
             />
             {submission.type === "FEATURE" && (
-              <VoteButton submissionId={submission.id} size="sm" />
+              <VoteButton
+                submissionId={submission.id}
+                initialCount={submission.voteCount}
+                initialHasVoted={submission.hasVoted}
+                size="sm"
+              />
             )}
           </div>
         </div>
@@ -149,7 +161,7 @@ function KanbanCard({
 export default function KanbanBoard({
   submissions: initialSubmissions,
 }: {
-  submissions: SubmissionWithUser[];
+  submissions: KanbanSubmission[];
 }) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
 

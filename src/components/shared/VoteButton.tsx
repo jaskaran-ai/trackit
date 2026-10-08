@@ -31,8 +31,9 @@ export default function VoteButton({
   const [hasVoted, setHasVoted] = useState(initialHasVoted ?? false);
   const [pending, setPending] = useState(false);
 
-  // Cards and lists render without vote data, so the button hydrates itself
-  // once on mount instead of forcing every caller to join the vote tables.
+  // Lists that enrich submissions on the server pass initialCount and
+  // initialHasVoted, so this effect stays dormant for them. It only runs for
+  // callers that render the button with a bare submissionId: one mount lookup.
   useEffect(() => {
     if (!needsHydration) return;
 
