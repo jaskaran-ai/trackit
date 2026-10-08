@@ -19,11 +19,17 @@ export async function GET(req: NextRequest) {
   const dir = searchParams.get("dir") === "asc" ? "asc" : "desc";
   const limit = Number(searchParams.get("limit"));
   const offset = Number(searchParams.get("offset"));
+  // Archived rows are only ever visible to admins, and only when asked for.
+  const includeDeleted = searchParams.get("includeDeleted") === "true";
 
   const isAdmin = session.user.role === "admin";
 
+  // Non-admins can never opt into archived rows.
+  const withDeleted = isAdmin && includeDeleted;
+
   const filters: Parameters<typeof listSubmissions>[0] = {
     ...(isAdmin ? {} : { userId: session.user.id }),
+    ...(withDeleted ? { includeDeleted: true } : {}),
     ...(type ? { type } : {}),
     ...(status ? { status } : {}),
     ...(priority ? { priority } : {}),
@@ -39,6 +45,7 @@ export async function GET(req: NextRequest) {
   // Total is the unpaginated count so clients can render pager controls.
   const total = await countSubmissions({
     ...(isAdmin ? {} : { userId: session.user.id }),
+    ...(withDeleted ? { includeDeleted: true } : {}),
     ...(type ? { type } : {}),
     ...(status ? { status } : {}),
     ...(priority ? { priority } : {}),
