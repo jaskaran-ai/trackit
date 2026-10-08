@@ -2,13 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Save } from "lucide-react";
+import { Trash2, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { Submission } from "@/db/types";
 
 const STATUS_OPTIONS = ["OPEN", "IN_PROGRESS", "REVIEW", "COMPLETE", "CANCELED"] as const;
 const PRIORITY_OPTIONS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+
+/** Local (not UTC) YYYY-MM-DD for a date input's value. */
+function toDateInputValue(value: Date | string): string {
+  const d = new Date(value);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
 
 const STATUS_LABELS: Record<string, string> = {
   OPEN: "Open",
@@ -41,11 +49,18 @@ export default function AdminStatusControls({
   const router = useRouter();
   const [status, setStatus] = useState(submission.status);
   const [priority, setPriority] = useState(submission.priority);
+  const [dueDate, setDueDate] = useState(
+    submission.dueDate ? toDateInputValue(submission.dueDate) : ""
+  );
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const isDirty = status !== submission.status || priority !== submission.priority;
+  const initialDue = submission.dueDate ? toDateInputValue(submission.dueDate) : "";
+  const isDirty =
+    status !== submission.status ||
+    priority !== submission.priority ||
+    dueDate !== initialDue;
 
   const handleSave = async () => {
     setSaving(true);
@@ -53,7 +68,11 @@ export default function AdminStatusControls({
       const res = await fetch(`/api/submissions/${submission.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, priority }),
+        body: JSON.stringify({
+          status,
+          priority,
+          dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        }),
       });
       if (!res.ok) throw new Error("Failed to update");
       toast.success("Submission updated");
@@ -127,6 +146,29 @@ export default function AdminStatusControls({
                 {PRIORITY_LABELS[p]}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Due date */}
+        <div className="flex flex-col">
+          <label className="block text-xs font-500 text-zinc-500 mb-1.5">Due date</label>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-200 outline-none focus:border-indigo-500/60 transition-colors [color-scheme:dark]"
+            />
+            {dueDate && (
+              <button
+                type="button"
+                onClick={() => setDueDate("")}
+                aria-label="Clear due date"
+                className="shrink-0 cursor-pointer rounded-md border border-zinc-700 bg-zinc-800 p-1.5 text-zinc-500 transition-colors hover:border-zinc-600 hover:text-zinc-300"
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
         </div>
       </div>

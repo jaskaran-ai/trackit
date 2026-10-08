@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { getSubmissionById } from "@/db/submissions";
 import Navbar from "@/components/shared/Navbar";
 import { StatusBadge, TypeBadge, PriorityBadge } from "@/components/shared/Badges";
+import StatusHistory from "@/components/submission/StatusHistory";
 import AdminStatusControls from "./AdminStatusControls";
 import { formatDate, formatBytes } from "@/lib/utils";
 import {
@@ -14,6 +15,8 @@ import {
   Image as ImageIcon,
   Film,
   Calendar,
+  CalendarClock,
+  CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -82,6 +85,24 @@ export default async function AdminSubmissionDetailPage({
               </div>
             </div>
 
+            {/* Due date / resolved */}
+            {(submission.dueDate || submission.resolvedAt) && (
+              <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                {submission.dueDate && (
+                  <span className="flex items-center gap-1.5 text-zinc-400">
+                    <CalendarClock size={12} className="text-zinc-600" />
+                    Due {formatDate(submission.dueDate)}
+                  </span>
+                )}
+                {submission.resolvedAt && (
+                  <span className="flex items-center gap-1.5 text-emerald-400/90">
+                    <CheckCircle2 size={12} />
+                    Resolved {formatDate(submission.resolvedAt)}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Admin controls */}
             <AdminStatusControls submission={submission} />
           </div>
@@ -96,6 +117,8 @@ export default async function AdminSubmissionDetailPage({
               dangerouslySetInnerHTML={{ __html: submission.description }}
             />
           </div>
+
+          <StatusHistory submissionId={submission.id} />
 
           {/* Attachments */}
           {submission.attachments.length > 0 && (
