@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
-import { cn, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { Badge, type BadgeTone } from "@/components/arc/badge/badge";
 import type { SubmissionStatus } from "@/db/types";
 
 const RESOLVED: SubmissionStatus[] = ["COMPLETE", "CANCELED"];
@@ -15,9 +17,15 @@ type AgingBadgeProps = {
 };
 
 /**
- * Compact traffic-light pill for how long a submission has been open.
- * Resolved or archived items render nothing.
+ * How long a submission has been open. Resolved or archived items render
+ * nothing, so a settled row carries no age at all.
+ *
+ * Thresholds are the SLA, so they are named rather than inlined into a colour
+ * decision: three days is a warning, seven is overdue.
  */
+const AMBER_DAYS = 3;
+const RED_DAYS = 7;
+
 export default function AgingBadge({
   createdAt,
   dueDate,
@@ -25,39 +33,45 @@ export default function AgingBadge({
   resolvedAt,
 }: AgingBadgeProps) {
   const isResolved = RESOLVED.includes(status) || Boolean(resolvedAt);
-  if (isResolved) return null;
+
+  /*
+   * Age is measured against the current time, and `Date.now()` cannot be read
+   * during render: the server and the browser each answer, and around midnight
+   * they disagree by a day, so React would throw the first paint away and the
+   * table would flicker. The clock is therefore null until an effect installs
+   * it, and the badge stays absent for that one frame, exactly as it does for a
+   * resolved row.
+   */
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
+
+  if (isResolved || now === null) return null;
 
   const openedAt = new Date(createdAt).getTime();
-  const now = Date.now();
   const days = Math.max(0, Math.floor((now - openedAt) / DAY_MS));
 
   const due = dueDate ? new Date(dueDate) : null;
   const isPastDue = Boolean(due && due.getTime() < now);
 
-  const isRed = isPastDue || days >= 7;
-  const isAmber = !isRed && days >= 3;
+  const tone: BadgeTone = isPastDue || days >= RED_DAYS ? "danger" : days >= AMBER_DAYS ? "warning" : "success";
 
-  const tone = isRed
-    ? "bg-red-500/10 text-red-400 border-red-500/30"
-    : isAmber
-      ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-      : "bg-emerald-500/10 text-emerald-400/90 border-emerald-500/20";
-
-  const title = isPastDue
-    ? `${days}d open · due ${formatDate(due as Date)}`
-    : `${days}d open`;
+  const title = due
+    ? `Open ${days} days, due ${formatDate(due)}`
+    : `Open ${days} days`;
 
   return (
-    <span
+    <Badge
+      tone={tone}
+      size="sm"
+      icon={<Clock size={9} aria-hidden />}
       title={title}
-      className={cn(
-        "inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] font-500 leading-none whitespace-nowrap",
-        tone
-      )}
     >
-      <Clock size={9} className="shrink-0" />
-      {isPastDue && <span className="font-600">overdue</span>}
+      {isPastDue ? "Overdue " : ""}
       <span className="tabular-nums">{days}d</span>
-    </span>
+      <span className="sr-only">{isPastDue ? ", past its due date" : ""}</span>
+    </Badge>
   );
 }

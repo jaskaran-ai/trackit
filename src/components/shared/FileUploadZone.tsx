@@ -1,215 +1,133 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { useDropzone } from "react-dropzone";
-import { Upload, X, FileText, Image, Film, File, Cloud, HardDrive } from "lucide-react";
-import { cn, formatBytes, ACCEPTED_FILE_TYPES, MAX_FILE_SIZE, MAX_FILES } from "@/lib/utils";
+import { FileDropzone, type FileDropzoneItem } from "@/components/arc/file-dropzone/file-dropzone";
 import { useUploadThing } from "@/lib/uploadthing-client";
+import { ACCEPTED_FILE_TYPES, MAX_FILES, MAX_FILE_SIZE } from "@/lib/utils";
 
 const USE_UPLOADTHING = process.env.NEXT_PUBLIC_USE_UPLOADTHING === "true";
 
-interface UploadedFile {
+/** What the upload endpoint hands back, stored alongside a picked file. */
+export interface UploadedAttachment {
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+}
+
+export interface UploadedFile {
   id: string;
   file: File;
   preview?: string;
-  uploaded?: {
-    fileName: string;
-    fileUrl: string;
-    fileSize: number;
-    mimeType: string;
-  };
+  uploaded?: UploadedAttachment;
 }
 
-interface FileUploadZoneProps {
+/** The `accept` map flattened to the comma-separated string the dropzone takes. */
+const ACCEPT = Object.values(ACCEPTED_FILE_TYPES)
+  .flat()
+  .join(",");
+
+const MAX_MB = Math.round(MAX_FILE_SIZE / 1024 / 1024);
+
+export default function FileUploadZone({
+  onFilesChange,
+  files,
+}: {
   onFilesChange: (files: UploadedFile[]) => void;
   files: UploadedFile[];
-}
-
-function FileIcon({ mimeType }: { mimeType: string }) {
-  if (mimeType.startsWith("image/")) return <Image size={18} className="text-blue-400" />;
-  if (mimeType.startsWith("video/")) return <Film size={18} className="text-violet-400" />;
-  if (mimeType === "application/pdf") return <FileText size={18} className="text-red-400" />;
-  return <File size={18} className="text-zinc-400" />;
-}
-
-export default function FileUploadZone({ onFilesChange, files }: FileUploadZoneProps) {
-  const [uploading, setUploading] = useState(false);
-
-  // Always call the hook (React rules) — only used when USE_UPLOADTHING is true
+}) {
+  // Always call the hook (React rules). Only reached when USE_UPLOADTHING is on.
   const { startUpload } = useUploadThing("submissionAttachments", {
     onUploadError: (err) => console.error("UploadThing error:", err),
   });
 
-  const onDrop = useCallback(
-    async (acceptedFiles: File[]) => {
-      const remaining = MAX_FILES - files.length;
-      const toAdd = acceptedFiles.slice(0, remaining);
-      if (toAdd.length === 0) return;
+  /* Arc owns the file list and the drag target, and reports progress per file.
+     Each file is uploaded on its own so its row can show real progress; the
+     endpoint takes one file under the same `files` field either way. */
+  async function upload(
+    item: FileDropzoneItem,
+    options: { onProgress: (percent: number) => void; signal: AbortSignal },
+  ) {
+    const file = item.file;
+    if (!file) return;
 
-      const newFiles: UploadedFile[] = toAdd.map((file) => ({
-        id: Math.random().toString(36).slice(2),
-        file,
-        preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
-      }));
+    const settle = (percent: number) => options.onProgress(percent);
 
-      const combined = [...files, ...newFiles];
-      onFilesChange(combined);
-      setUploading(true);
+    if (USE_UPLOADTHING) {
+      const results = await startUpload([file]);
+      const match = results?.find((r) => r.name === file.name);
+      if (!match) throw new Error("Upload failed");
 
-      try {
-        if (USE_UPLOADTHING) {
-          // UploadThing upload
-          const results = await startUpload(toAdd);
-          if (!results) throw new Error("Upload failed");
+      const serverData = match.serverData as
+        | { fileName: string; fileUrl: string; fileSize: number }
+        | null;
 
-          const updated = combined.map((f) => {
-            const match = results.find((r) => r.name === f.file.name);
-            if (!match) return f;
-            const serverData = match.serverData as { fileName: string; fileUrl: string; fileSize: number } | null;
-            return {
-              ...f,
-              uploaded: {
-                fileName: serverData?.fileName ?? match.name,
-                fileUrl: serverData?.fileUrl ?? match.ufsUrl,
-                fileSize: serverData?.fileSize ?? match.size,
-                mimeType: f.file.type,
-              },
-            };
-          });
-          onFilesChange(updated);
-        } else {
-          // Local upload
-          const formData = new FormData();
-          toAdd.forEach((f) => formData.append("files", f));
+      onFilesChange(
+        files.map((f) =>
+          f.id === item.id
+            ? {
+                ...f,
+                uploaded: {
+                  fileName: serverData?.fileName ?? match.name,
+                  fileUrl: serverData?.fileUrl ?? match.ufsUrl,
+                  fileSize: serverData?.fileSize ?? match.size,
+                  mimeType: file.type,
+                },
+              }
+            : f,
+        ),
+      );
+      return;
+    }
 
-          const res = await fetch("/api/upload", { method: "POST", body: formData });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error);
+    const formData = new FormData();
+    formData.append("files", file);
 
-          const updated = combined.map((f) => {
-            const match = data.files.find((u: any) => u.fileName === f.file.name);
-            return match ? { ...f, uploaded: match } : f;
-          });
-          onFilesChange(updated);
-        }
-      } catch (err) {
-        console.error("Upload failed:", err);
-      } finally {
-        setUploading(false);
-      }
-    },
-    [files, onFilesChange, startUpload]
-  );
+    settle(10);
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+      signal: options.signal,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Upload failed");
 
-  const removeFile = (id: string) => {
-    onFilesChange(files.filter((f) => f.id !== id));
-  };
+    const match = data.files.find(
+      (uploaded: UploadedAttachment) => uploaded.fileName === file.name,
+    );
+    if (!match) throw new Error("Upload did not return the file");
 
-  const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
-    onDrop,
-    accept: ACCEPTED_FILE_TYPES,
-    maxSize: MAX_FILE_SIZE,
-    maxFiles: MAX_FILES - files.length,
-    disabled: files.length >= MAX_FILES || uploading,
-  });
+    settle(100);
+    onFilesChange(
+      files.map((f) => (f.id === item.id ? { ...f, uploaded: match } : f)),
+    );
+  }
+
+  /* Arc tracks its own rows; the page only needs the settled attachments, so
+     the two are reconciled here rather than the page holding a parallel list. */
+  function handleFilesChange(picked: File[]) {
+    const previous = new Map(files.map((f) => [f.file.name, f]));
+    onFilesChange(
+      picked.map(
+        (file) =>
+          previous.get(file.name) ?? {
+            id: `${file.name}-${file.size}-${file.lastModified}`,
+            file,
+            ...(file.type.startsWith("image/")
+              ? { preview: URL.createObjectURL(file) }
+              : {}),
+          },
+      ),
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      {/* Provider indicator */}
-      {USE_UPLOADTHING && (
-        <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
-          <Cloud size={10} className="text-violet-500" />
-          Uploads via UploadThing
-        </div>
-      )}
-
-      {/* Drop zone */}
-      {files.length < MAX_FILES && (
-        <div
-          {...getRootProps()}
-          className={cn(
-            "border-2 border-dashed rounded-xl px-6 py-8 text-center cursor-pointer transition-all",
-            isDragActive
-              ? "border-indigo-500 bg-indigo-500/5"
-              : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/50",
-            (files.length >= MAX_FILES || uploading) && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          <input {...getInputProps()} />
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center">
-              <Upload size={18} className={isDragActive ? "text-indigo-400" : "text-zinc-500"} />
-            </div>
-            {uploading ? (
-              <div className="flex items-center gap-2 text-sm text-zinc-400">
-                <div className="w-3 h-3 border border-zinc-600 border-t-indigo-400 rounded-full animate-spin" />
-                Uploading…
-              </div>
-            ) : isDragActive ? (
-              <div className="text-sm text-indigo-400 font-500">Drop files here</div>
-            ) : (
-              <>
-                <div className="text-sm text-zinc-300 font-500">
-                  Drop files or <span className="text-indigo-400">click to browse</span>
-                </div>
-                <div className="text-xs text-zinc-600">
-                  PNG, JPG, GIF, PDF, TXT, MP4 · Max {MAX_FILE_SIZE / 1024 / 1024}MB ·{" "}
-                  {MAX_FILES - files.length} remaining
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Rejections */}
-      {fileRejections.length > 0 && (
-        <div className="text-xs text-red-400 px-1">
-          {fileRejections[0].errors[0].message}
-        </div>
-      )}
-
-      {/* File list */}
-      {files.length > 0 && (
-        <div className="space-y-2">
-          {files.map((f) => (
-            <div
-              key={f.id}
-              className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5"
-            >
-              {f.preview ? (
-                <img
-                  src={f.preview}
-                  alt={f.file.name}
-                  className="w-9 h-9 rounded-md object-cover shrink-0"
-                />
-              ) : (
-                <div className="w-9 h-9 bg-zinc-800 rounded-md flex items-center justify-center shrink-0">
-                  <FileIcon mimeType={f.file.type} />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-zinc-200 truncate">{f.file.name}</p>
-                <p className="text-xs text-zinc-500">
-                  {formatBytes(f.file.size)}
-                  {f.uploaded ? (
-                    <span className="ml-1.5 text-emerald-500">✓ Uploaded</span>
-                  ) : uploading ? (
-                    <span className="ml-1.5 text-zinc-600">Uploading…</span>
-                  ) : null}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => removeFile(f.id)}
-                className="p-1 text-zinc-600 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <FileDropzone
+      accept={ACCEPT}
+      maxFiles={MAX_FILES}
+      maxSize={MAX_FILE_SIZE}
+      note={`PNG, JPG, GIF, PDF, TXT, MP4 · ${MAX_MB}MB each · ${MAX_FILES} files`}
+      onUpload={upload}
+      onFilesChange={handleFilesChange}
+    />
   );
 }

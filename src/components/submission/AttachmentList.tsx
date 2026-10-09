@@ -18,39 +18,44 @@ function AttachmentRow({
   const isVideo = att.mimeType.startsWith("video/");
 
   return (
-    <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-all group">
+    <div className="group flex items-center rounded-control border border-[var(--border-subtle)] transition-colors hover:border-border">
       <button
         type="button"
         onClick={onOpen}
         aria-label={`Preview ${att.fileName}`}
-        title={`Preview ${att.fileName}`}
-        className="flex items-center gap-3 flex-1 min-w-0 px-3 py-2.5 text-left rounded-l-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-l-control px-2.5 py-2 text-left"
       >
         {isImage ? (
           <img
             src={att.fileUrl}
-            alt={att.fileName}
-            className="w-8 h-8 rounded-md object-cover shrink-0"
+            alt=""
+            className="h-8 w-8 shrink-0 rounded-control object-cover"
             loading="lazy"
           />
         ) : (
-          <div className="w-8 h-8 bg-zinc-800 rounded-md flex items-center justify-center shrink-0">
-            {isPDF ? (
-              <FileText size={15} className="text-red-400" />
-            ) : isVideo ? (
-              <Film size={15} className="text-violet-400" />
-            ) : (
-              <FileText size={15} className="text-zinc-400" />
-            )}
-          </div>
+          <span
+            aria-hidden="true"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-surface-muted"
+          >
+            <FileText
+              size={15}
+              className={isPDF ? "text-danger" : isVideo ? "text-muted" : "text-muted"}
+            />
+          </span>
         )}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-zinc-200 truncate">{att.fileName}</p>
-          <p className="text-xs text-zinc-600">{formatBytes(att.fileSize)}</p>
-        </div>
+
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm text-foreground">
+            {att.fileName}
+          </span>
+          <span className="block text-xs text-muted">
+            {formatBytes(att.fileSize)}
+          </span>
+        </span>
       </button>
 
-      {/* Kept as its own control so the row stays keyboard reachable */}
+      {/* Its own control, so the row stays one tab stop and the download does
+          not fire when someone only meant to preview. */}
       <a
         href={att.fileUrl}
         download={att.fileName}
@@ -58,9 +63,9 @@ function AttachmentRow({
         rel="noopener noreferrer"
         aria-label={`Download ${att.fileName}`}
         title={`Download ${att.fileName}`}
-        className="p-2.5 mr-1 text-zinc-600 hover:text-zinc-300 transition-colors rounded-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+        className="mr-1 cursor-pointer rounded-control p-2.5 text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
       >
-        <Download size={13} />
+        <Download size={13} aria-hidden />
       </a>
     </div>
   );

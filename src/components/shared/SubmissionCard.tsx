@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { Clock, Paperclip } from "lucide-react";
+import { formatDate, submissionAttachmentCount } from "@/lib/utils";
+import { Avatar } from "@/components/arc/avatar/avatar";
 import { StatusBadge, TypeBadge, PriorityBadge } from "./Badges";
 import VoteButton from "./VoteButton";
-import { Paperclip, Clock } from "lucide-react";
 import type { SubmissionWithUser } from "@/types";
 
 // Server pages attach vote state to each row so listed cards render without a
@@ -24,45 +25,43 @@ export default function SubmissionCard({ submission, isAdmin }: SubmissionCardPr
     : `/submission/${submission.id}`;
 
   const isFeature = submission.type === "FEATURE";
-  const hasAttachments = submission.attachments.length > 0;
+  const attachmentCount = submissionAttachmentCount(submission);
+  const hasAttachments = attachmentCount > 0;
 
   return (
-    // The whole card used to be one Link, so the vote affordance now lives in a
-    // footer row outside it — clicking it never navigates.
-    <div className="flex flex-col bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-700 rounded-xl transition-all duration-200">
-      <Link href={href} className="block group p-4 flex-1">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <h3 className="text-sm font-500 text-zinc-100 group-hover:text-white line-clamp-1 flex-1 leading-snug">
+    // The card is not one link: the title region navigates, the footer holds the
+    // vote control, and nesting a button inside a link would make clicking it
+    // ambiguous.
+    <div className="flex flex-col rounded-panel border border-border bg-surface transition-colors hover:border-border-strong">
+      <Link href={href} className="group block flex-1 p-3.5 sm:p-4">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <h3 className="line-clamp-1 flex-1 text-sm font-500 leading-snug text-foreground group-hover:underline">
             {submission.title}
           </h3>
           <StatusBadge status={submission.status} />
         </div>
 
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        <div className="flex flex-wrap gap-1.5">
           <TypeBadge type={submission.type} />
           <PriorityBadge priority={submission.priority} />
         </div>
 
         {isAdmin && (
-          <div className="flex items-center gap-2 mb-3">
-            {submission.user.image ? (
-              <img
-                src={submission.user.image}
-                alt={submission.user.name}
-                className="w-4 h-4 rounded-full"
-              />
-            ) : (
-              <div className="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-[9px] text-white font-600">
-                {submission.user.name?.[0]}
-              </div>
-            )}
-            <span className="text-xs text-zinc-500 truncate">{submission.user.name}</span>
+          <div className="flex items-center gap-2">
+            <Avatar
+              name={submission.user.name ?? "Unknown"}
+              src={submission.user.image ?? undefined}
+              size="sm"
+            />
+            <span className="truncate text-xs text-muted">
+              {submission.user.name}
+            </span>
           </div>
         )}
       </Link>
 
       {/* Footer — deliberately outside the Link */}
-      <div className="flex items-center gap-3 px-4 py-3 border-t border-zinc-800 text-xs text-zinc-600">
+      <div className="flex items-center gap-2.5 border-t border-[var(--border-subtle)] px-3.5 py-3 text-xs text-muted sm:px-4">
         {isFeature && (
           <VoteButton
             submissionId={submission.id}
@@ -72,15 +71,16 @@ export default function SubmissionCard({ submission, isAdmin }: SubmissionCardPr
           />
         )}
 
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="ml-auto flex items-center gap-2.5">
           <span className="flex items-center gap-1">
-            <Clock size={11} />
+            <Clock size={11} aria-hidden />
             {formatDate(submission.createdAt)}
           </span>
           {hasAttachments && (
             <span className="flex items-center gap-1">
-              <Paperclip size={11} />
-              {submission.attachments.length}
+              <Paperclip size={11} aria-hidden />
+              {attachmentCount}
+              <span className="sr-only"> attachments</span>
             </span>
           )}
         </div>

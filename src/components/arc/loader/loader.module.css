@@ -1,0 +1,43 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.spinner {
+  display: block;
+  border: 1.75px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-pill);
+  animation: arc-loader-spin 0.8s linear infinite;
+}
+
+.sm .spinner {
+  width: 15px;
+  height: 15px;
+}
+
+.md .spinner {
+  width: 22px;
+  height: 22px;
+  border-width: 2px;
+}
+
+.lg .spinner {
+  width: 28px;
+  height: 28px;
+  border-width: 2px;
+}
+
+@keyframes arc-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.6s;
+  }
+}

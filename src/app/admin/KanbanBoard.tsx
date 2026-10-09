@@ -2,24 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { TypeBadge, PriorityBadge } from "@/components/shared/Badges";
-import { PROJECT_LABELS, STATUS_LABELS, STATUS_COLORS } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { ChevronRight, GripVertical } from "lucide-react";
+import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
+import { TypeBadge, PriorityBadge, StatusBadge } from "@/components/shared/Badges";
+import { Avatar } from "@/components/arc/avatar/avatar";
+import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import AgingBadge from "@/components/admin/AgingBadge";
 import VoteButton from "@/components/shared/VoteButton";
-import toast from "react-hot-toast";
+import { PROJECT_LABELS, STATUS_LABELS } from "@/lib/labels";
+import { SUBMISSION_STATUSES, type SubmissionStatus } from "@/db/types";
 import type { SubmissionWithUser } from "@/types";
-import type { SubmissionStatus } from "@/db/types";
-import { ChevronRight, GripVertical } from "lucide-react";
-import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-
-const COLUMNS: { status: SubmissionStatus; dot: string }[] = [
-  { status: "OPEN", dot: "bg-blue-400" },
-  { status: "IN_PROGRESS", dot: "bg-amber-400" },
-  { status: "REVIEW", dot: "bg-violet-400" },
-  { status: "COMPLETE", dot: "bg-emerald-400" },
-  { status: "CANCELED", dot: "bg-zinc-500" },
-];
 
 // Submissions arrive with vote state attached on the server, so a card's vote
 // button renders from initial values instead of fetching each one on mount.
@@ -37,105 +30,75 @@ function KanbanCard({
   onStatusChange: (id: string, status: SubmissionStatus) => void;
   index: number;
 }) {
-  const [open, setOpen] = useState(false);
-
-  const otherStatuses = COLUMNS.map((c) => c.status).filter(
-    (s) => s !== submission.status
-  );
+  const others = SUBMISSION_STATUSES.filter((s) => s !== submission.status);
 
   return (
     <Draggable draggableId={submission.id} index={index}>
       {(provided, snapshot) => (
-        <div
+        <article
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={cn(
-            "bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2.5 transition-colors",
-            snapshot.isDragging ? "border-indigo-500 shadow-lg shadow-indigo-500/20 rotate-2" : "hover:border-zinc-700"
-          )}
+          className={`space-y-2.5 rounded-control border bg-surface p-2.5 ${
+            snapshot.isDragging
+              ? "border-accent shadow-lg"
+              : "border-[var(--border-subtle)] hover:border-border"
+          }`}
         >
-          {/* Header with drag handle */}
           <div className="flex items-center justify-between gap-1">
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <div
                 {...provided.dragHandleProps}
-                className="cursor-grab active:cursor-grabbing text-zinc-600 hover:text-zinc-400 transition-colors"
+                className="cursor-grab text-muted transition-colors hover:text-secondary active:cursor-grabbing"
               >
-                <GripVertical size={14} />
+                <GripVertical size={14} aria-hidden />
+                <span className="sr-only">Drag to move between columns</span>
               </div>
-              <span className="text-[10px] font-500 text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+              <span className="truncate text-xs text-muted">
                 {PROJECT_LABELS[submission.project] ?? submission.project}
               </span>
             </div>
+
             <Link
               href={`/admin/submission/${submission.id}`}
-              className="text-[10px] text-zinc-600 hover:text-indigo-400 transition-colors flex items-center gap-0.5"
+              className="flex shrink-0 items-center gap-0.5 text-xs text-muted transition-colors hover:text-accent"
             >
-              View <ChevronRight size={10} />
+              View
+              <ChevronRight size={10} aria-hidden />
             </Link>
           </div>
 
-          {/* Title */}
-          <p className="text-sm font-500 text-zinc-200 leading-snug line-clamp-2">{submission.title}</p>
+          <h3 className="line-clamp-2 text-sm font-500 leading-snug text-foreground">
+            {submission.title}
+          </h3>
 
-          {/* Badges */}
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex flex-wrap items-center gap-1.5">
             <TypeBadge type={submission.type} />
             <PriorityBadge priority={submission.priority} />
           </div>
 
-          {/* Reporter */}
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              {submission.user.image ? (
-                <img
-                  src={submission.user.image}
-                  alt={submission.user.name}
-                  className="w-4 h-4 rounded-full"
-                />
-              ) : (
-                <div className="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-[8px] text-white font-600 shrink-0">
-                  {submission.user.name?.[0]}
-                </div>
-              )}
-              <span className="text-[10px] text-zinc-500 truncate max-w-[80px]">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Avatar
+                name={submission.user.name ?? "Unknown"}
+                src={submission.user.image ?? undefined}
+                size="sm"
+              />
+              <span className="max-w-24 truncate text-xs text-muted">
                 {submission.user.name}
               </span>
             </div>
 
-            {/* Move to dropdown */}
-            <div className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpen((v) => !v);
-                }}
-                onBlur={() => setTimeout(() => setOpen(false), 150)}
-                className="text-[10px] text-zinc-600 hover:text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 px-2 py-0.5 rounded transition-colors"
-              >
-                Move →
-              </button>
-              {open && (
-                <div className="absolute right-0 bottom-6 z-10 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl min-w-[120px] py-1 overflow-hidden">
-                  {otherStatuses.map((s) => (
-                    <button
-                      key={s}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpen(false);
-                        onStatusChange(submission.id, s);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 transition-colors"
-                    >
-                      {STATUS_LABELS[s]}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* The keyboard and touch path to a move. Drag is the shortcut, not
+                the only way, so the menu carries every other status. */}
+            <DropdownMenu
+              label="Move"
+              items={others.map((status) => ({
+                label: STATUS_LABELS[status],
+                onSelect: () => onStatusChange(submission.id, status),
+              }))}
+            />
           </div>
 
-          {/* Footer: aging + votes */}
           <div className="flex items-center justify-between gap-2 pt-0.5">
             <AgingBadge
               createdAt={submission.createdAt}
@@ -152,23 +115,33 @@ function KanbanCard({
               />
             )}
           </div>
-        </div>
+        </article>
       )}
     </Draggable>
   );
 }
 
+/**
+ * Five lanes, one per status, with drag between them.
+ *
+ * Arc's `project-board` was the obvious candidate and was deliberately not used:
+ * it fixes four stages, so `CANCELED` had nowhere to go, and it ships sample
+ * tasks and demo portraits that would have to be gutted. A block is edited
+ * through its props or not at all. Its docs also point large boards at a
+ * dedicated drag library, which is what this is.
+ */
 export default function KanbanBoard({
   submissions: initialSubmissions,
 }: {
   submissions: KanbanSubmission[];
 }) {
+  const { toast } = useToastStack();
   const [submissions, setSubmissions] = useState(initialSubmissions);
 
-  const handleStatusChange = async (id: string, newStatus: SubmissionStatus) => {
-    const prev = [...submissions];
+  async function handleStatusChange(id: string, newStatus: SubmissionStatus) {
+    const previous = submissions;
     setSubmissions((all) =>
-      all.map((s) => (s.id === id ? { ...s, status: newStatus } : s))
+      all.map((s) => (s.id === id ? { ...s, status: newStatus } : s)),
     );
 
     try {
@@ -178,61 +151,57 @@ export default function KanbanBoard({
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`Moved to ${STATUS_LABELS[newStatus]}`);
+      /* No success toast: the card is already sitting in its new column, which
+         is the confirmation. The revert below is what needs saying. */
     } catch {
-      setSubmissions(prev);
-      toast.error("Failed to update status");
+      setSubmissions(previous);
+      toast({ type: "error", title: "Could not update the status" });
     }
-  };
+  }
 
-  const handleDragEnd = async (result: DropResult) => {
+  async function handleDragEnd(result: DropResult) {
     const { destination, source, draggableId } = result;
-
     if (!destination) return;
-    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
-
-    const newStatus = destination.droppableId as SubmissionStatus;
-    await handleStatusChange(draggableId, newStatus);
-  };
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+    await handleStatusChange(draggableId, destination.droppableId as SubmissionStatus);
+  }
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4 min-h-[400px]">
-        {COLUMNS.map(({ status, dot }) => {
+      <div className="flex min-h-[400px] gap-3 overflow-x-auto pb-4">
+        {SUBMISSION_STATUSES.map((status) => {
           const cards = submissions.filter((s) => s.status === status);
           return (
-            <div key={status} className="flex-1 min-w-[220px] max-w-[280px]">
-              {/* Column header */}
-              <div
-                className={cn(
-                  "flex items-center gap-2 mb-3 px-3 py-2 rounded-xl border",
-                  STATUS_COLORS[status]
-                )}
-              >
-                <span className={cn("w-2 h-2 rounded-full", dot)} />
-                <span className="text-xs font-600 text-zinc-300">
-                  {STATUS_LABELS[status]}
-                </span>
-                <span className="ml-auto text-xs font-500 text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded-full">
+            <section
+              key={status}
+              aria-label={`${STATUS_LABELS[status]}, ${cards.length} submissions`}
+              className="min-w-[220px] max-w-[280px] flex-1"
+            >
+              <header className="mb-2.5 flex items-center gap-2 px-2.5 py-2">
+                <StatusBadge status={status} />
+                <span className="ml-auto text-xs tabular-nums text-muted">
                   {cards.length}
                 </span>
-              </div>
+              </header>
 
-              {/* Cards */}
               <Droppable droppableId={status} key={status}>
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={cn(
-                      "space-y-2 min-h-[200px] rounded-xl p-1 transition-colors",
-                      snapshot.isDraggingOver ? "bg-zinc-800/50" : ""
-                    )}
+                    className={`min-h-[200px] space-y-2 rounded-control p-1 transition-colors ${
+                      snapshot.isDraggingOver ? "bg-surface-muted" : ""
+                    }`}
                   >
                     {cards.length === 0 ? (
-                      <div className="text-center py-8 text-xs text-zinc-700 border border-dashed border-zinc-800 rounded-xl">
-                        No items
-                      </div>
+                      <p className="rounded-control border border-dashed border-[var(--border-subtle)] py-6 text-center text-xs text-muted">
+                        Nothing here
+                      </p>
                     ) : (
                       cards.map((s, index) => (
                         <KanbanCard
@@ -247,7 +216,7 @@ export default function KanbanBoard({
                   </div>
                 )}
               </Droppable>
-            </div>
+            </section>
           );
         })}
       </div>

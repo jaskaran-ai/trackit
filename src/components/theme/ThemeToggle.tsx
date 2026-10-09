@@ -1,82 +1,66 @@
 "use client";
 
-import { Monitor, Moon, Sun } from "lucide-react";
-import toast from "react-hot-toast";
-import { cn } from "@/lib/utils";
+import { ThemeSwitch } from "@/components/arc/theme-switch/theme-switch";
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { useTheme, type ThemePreference } from "@/components/theme/ThemeProvider";
 
-const THEME_OPTIONS: Array<{
-  value: ThemePreference;
-  label: string;
-  icon: typeof Sun;
-}> = [
-  { value: "system", label: "System", icon: Monitor },
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-];
+const THEME_LABELS: Record<ThemePreference, string> = {
+  system: "System",
+  light: "Light",
+  dark: "Dark",
+};
 
 /**
- * Three-way segmented control. Icon only by default so it fits in the Navbar
- * cluster; pass `showLabels` for the settings form.
+ * The three-way preference, for the settings form where there is room to name
+ * each option. "System" only exists here: the Navbar switch has two states to
+ * animate between, and offering a third would mean a control that cannot show
+ * which one it is on.
  */
 export function ThemeSegmentedControl({
   value,
   onChange,
-  showLabels = false,
   className,
 }: {
   value: ThemePreference;
   onChange: (theme: ThemePreference) => void;
-  showLabels?: boolean;
   className?: string;
 }) {
   return (
-    <div
-      role="group"
-      aria-label="Theme"
-      className={cn(
-        "flex items-center gap-0.5 p-0.5 rounded-lg bg-zinc-800 border border-zinc-700",
-        className,
-      )}
-    >
-      {THEME_OPTIONS.map(({ value: option, label, icon: Icon }) => {
-        const active = option === value;
-
-        return (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={active}
-            aria-label={label}
-            title={label}
-            onClick={() => onChange(option)}
-            className={cn(
-              "flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-500 transition-colors cursor-pointer",
-              showLabels ? "flex-1 px-2.5" : "w-8",
-              active
-                ? "bg-zinc-900 text-zinc-100"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/60",
-            )}
-          >
-            <Icon size={13} />
-            {showLabels && <span>{label}</span>}
-          </button>
-        );
-      })}
-    </div>
+    <SegmentedControl
+      className={className}
+      label="Theme"
+      value={value}
+      onValueChange={(next) => onChange(next as ThemePreference)}
+      options={[
+        { value: "system", label: THEME_LABELS.system },
+        { value: "light", label: THEME_LABELS.light },
+        { value: "dark", label: THEME_LABELS.dark },
+      ]}
+    />
   );
 }
 
-/** Compact theme switch for the Navbar. */
+/**
+ * Navbar switch. It shows the theme that is actually on screen, so a "system"
+ * preference is displayed as the resolved theme it produced. Choosing one here
+ * pins an explicit light or dark and stops following the OS.
+ */
 export default function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
 
-  const handleChange = (next: ThemePreference) => {
-    if (next === theme) return;
+  function handleChange(next: "light" | "dark") {
+    // The whole page repaints on this. A toast on top of that would only
+    // confirm what is already on screen.
+    if (next === resolvedTheme && theme === next) return;
     setTheme(next);
-    const label = THEME_OPTIONS.find((option) => option.value === next)?.label ?? next;
-    toast.success(`Theme set to ${label.toLowerCase()}`);
-  };
+  }
 
-  return <ThemeSegmentedControl value={theme} onChange={handleChange} />;
+  return (
+    <ThemeSwitch
+      theme={resolvedTheme}
+      onThemeChange={handleChange}
+      iconOnly
+      label="Theme"
+    />
+  );
 }

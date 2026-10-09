@@ -1,111 +1,81 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { listSubmissions } from "@/db/submissions";
-import { countVotesBySubmission, listVotedSubmissionIds } from "@/db/votes";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { auth } from "@/lib/auth";
+import { countSubmissions, listSubmissions } from "@/db/submissions";
+import {
+  countVotesBySubmission,
+  listVotedSubmissionIds,
+} from "@/db/votes";
+import { countUnreadNotifications } from "@/db/notifications";
+import { getQueryClient, queryKeys } from "@/lib/query-client";
 import Navbar from "@/components/shared/Navbar";
-import DashboardFilters from "@/components/dashboard/DashboardFilters";
-import Link from "next/link";
-import { Plus, Bug, Sparkles, Inbox } from "lucide-react";
-import type { SubmissionWithUser } from "@/types";
-
-// Vote state attached on the server and read by SubmissionCard, which passes it
-// to VoteButton as initial values so no card fetches its summary on mount.
-type SubmissionWithVotes = SubmissionWithUser & {
-  voteCount: number;
-  hasVoted: boolean;
-};
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardMetricsSection from "@/components/dashboard/DashboardMetricsSection";
+import DashboardSubmissionsSection from "@/components/dashboard/DashboardSubmissionsSection";
+import type { DashboardSummary } from "@/hooks/use-dashboard-data";
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/auth/signin");
 
-  const submissions = await listSubmissions({ userId: session.user.id });
+  const userId = session.user.id;
+  const isAdmin = session.user.role === "admin";
+  const scope = isAdmin ? {} : { userId };
 
-  // One batched pair of vote queries per page load. Counting inside each card
-  // would fire a GET /api/submissions/[id]/vote request per feature row, and
-  // only features render a vote button, so only their ids are queried.
-  const featureIds = submissions
-    .filter((s) => s.type === "FEATURE")
-    .map((s) => s.id);
-
-  const [voteCounts, votedIds] = await Promise.all([
-    countVotesBySubmission(featureIds),
-    listVotedSubmissionIds(featureIds, session.user.id),
+  const [total, open, bugs, features, submissions, unread] = await Promise.all([
+    countSubmissions(scope),
+    countSubmissions({
+      ...scope,
+      status: ["OPEN", "IN_PROGRESS", "REVIEW"],
+    }),
+    countSubmissions({ ...scope, type: "BUG" }),
+    countSubmissions({ ...scope, type: "FEATURE" }),
+    listSubmissions({ ...scope, lean: true }),
+    countUnreadNotifications(userId),
   ]);
 
-  const submissionsWithVotes = submissions.map((submission) => ({
-    ...submission,
-    voteCount: voteCounts.get(submission.id) ?? 0,
-    hasVoted: votedIds.has(submission.id),
-  })) as SubmissionWithVotes[];
+  const featureIds = submissions
+    .filter((row) => row.type === "FEATURE")
+    .map((row) => row.id);
 
-  const bugs = submissions.filter((s) => s.type === "BUG");
-  const features = submissions.filter((s) => s.type === "FEATURE");
-  const open = submissions.filter((s) => s.status === "OPEN");
+  const [counts, votedIds] = await Promise.all([
+    countVotesBySubmission(featureIds),
+    listVotedSubmissionIds(featureIds, userId),
+  ]);
 
+  const summary: DashboardSummary = {
+    total,
+    open,
+    bugs,
+    features,
+    submissions: submissions as DashboardSummary["submissions"],
+    totalRows: total,
+    votes: {
+      counts: Object.fromEntries(counts),
+      votedIds: Array.from(votedIds),
+    },
+  };
+
+  const queryClient = getQueryClient();
+  queryClient.setQueryData(queryKeys.dashboard.summary, summary);
+  queryClient.setQueryData(queryKeys.dashboard.submissions, summary.submissions);
+  // votedIds array only — Set is not JSON-safe across dehydrate.
+  queryClient.setQueryData(queryKeys.dashboard.votes, {
+    counts: summary.votes.counts,
+    votedIds: summary.votes.votedIds,
+  });
+  queryClient.setQueryData(queryKeys.notifications.unread, unread);
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8 animate-fade-up">
-          <div>
-            <h1 className="font-display text-2xl font-700 text-white mb-1">
-              My Submissions
-            </h1>
-            <p className="text-zinc-500 text-sm">
-              Welcome back, {session.user.name?.split(" ")[0]}
-            </p>
-          </div>
-          <Link
-            href="/submit"
-            className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-500 px-4 py-2 rounded-lg transition-colors"
-          >
-            <Plus size={15} />
-            New Submission
-          </Link>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-8 animate-fade-up animate-fade-up-delay-1">
-          {[
-            { label: "Total", value: submissions.length, color: "text-white" },
-            { label: "Bugs", value: bugs.length, color: "text-red-400", icon: Bug },
-            { label: "Features", value: features.length, color: "text-violet-400", icon: Sparkles },
-          ].map(({ label, value, color, icon: Icon }) => (
-            <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <div className={`font-display text-2xl font-700 ${color} mb-0.5`}>{value}</div>
-              <div className="text-xs text-zinc-500 flex items-center gap-1">
-                {Icon && <Icon size={11} />}
-                {label}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Submissions list */}
-        {submissions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 animate-fade-up animate-fade-up-delay-2">
-            <div className="w-14 h-14 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center mb-4">
-              <Inbox size={22} className="text-zinc-600" />
-            </div>
-            <h3 className="font-display text-base font-600 text-zinc-300 mb-2">No submissions yet</h3>
-            <p className="text-sm text-zinc-600 mb-6">
-              Found a bug or have a feature idea? Let the team know.
-            </p>
-            <Link
-              href="/submit"
-              className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-500 px-4 py-2 rounded-lg transition-colors"
-            >
-              <Plus size={15} />
-              Create your first submission
-            </Link>
-          </div>
-        ) : (
-          <DashboardFilters submissions={submissionsWithVotes} />
-        )}
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6">
+        <HydrationBoundary state={dehydrate(queryClient)}>
+          <DashboardHeader />
+          <DashboardMetricsSection />
+          <DashboardSubmissionsSection />
+        </HydrationBoundary>
       </main>
     </div>
   );

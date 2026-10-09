@@ -1,130 +1,91 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { auth } from "@/lib/auth";
 import { getSubmissionStats, listSubmissions } from "@/db/submissions";
-import { countVotesBySubmission, listVotedSubmissionIds } from "@/db/votes";
 import { listUsers } from "@/db/users";
+import {
+  countVotesBySubmission,
+  listVotedSubmissionIds,
+} from "@/db/votes";
+import { countUnreadNotifications } from "@/db/notifications";
+import { getQueryClient, queryKeys } from "@/lib/query-client";
+import type { AdminStats } from "@/components/admin/StatsCharts";
 import Navbar from "@/components/shared/Navbar";
-import AdminTable from "./AdminTable";
-import KanbanBoard from "./KanbanBoard";
-import AdminViewToggle from "./AdminViewToggle";
-import StatsCharts, { type AdminStats } from "@/components/admin/StatsCharts";
-import UserManagement from "@/components/admin/UserManagement";
-import { Bug, Sparkles, Users, Inbox } from "lucide-react";
+import AdminHeader from "@/components/admin/AdminHeader";
+import AdminStatsSection from "@/components/admin/AdminStatsSection";
+import AdminSubmissionsSection from "@/components/admin/AdminSubmissionsSection";
+import AdminUsersSection from "@/components/admin/AdminUsersSection";
 import type { SubmissionWithUser } from "@/types";
-
-// Vote state attached on the server and read by the table and kanban views, so
-// their vote buttons render from initial values instead of fetching per row.
-type SubmissionWithVotes = SubmissionWithUser & {
-  voteCount: number;
-  hasVoted: boolean;
-};
 
 export default async function AdminPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/auth/signin");
   if (session.user.role !== "admin") redirect("/dashboard");
 
-  const [submissions, stats, users] = await Promise.all([
-    listSubmissions(),
-    getSubmissionStats(),
+  const [statsRaw, submissions, users, unread] = await Promise.all([
+    getSubmissionStats(30),
+    listSubmissions({ lean: true, unlimited: true }),
     listUsers(),
+    countUnreadNotifications(session.user.id),
   ]);
 
-  // One batched pair of vote queries for both views, instead of one vote
-  // summary request per feature row on the page. Bugs never show a button.
-  const featureIds = submissions
-    .filter((s) => s.type === "FEATURE")
-    .map((s) => s.id);
+  const stats: AdminStats = {
+    total: statsRaw.total,
+    byStatus: {
+      open: statsRaw.open,
+      inProgress: statsRaw.inProgress,
+      review: statsRaw.review,
+      complete: statsRaw.complete,
+      canceled: statsRaw.canceled,
+    },
+    byType: { bugs: statsRaw.bugs, features: statsRaw.features },
+    users: statsRaw.users,
+    archived: statsRaw.archived,
+    overdue: statsRaw.overdue,
+    avgResolutionHours: statsRaw.avgResolutionHours,
+    byProject: statsRaw.byProject,
+    trend: statsRaw.trend,
+  };
 
-  const [voteCounts, votedIds] = await Promise.all([
+  const featureIds = submissions
+    .filter((row) => row.type === "FEATURE")
+    .map((row) => row.id);
+
+  const [counts, votedIds] = await Promise.all([
     countVotesBySubmission(featureIds),
     listVotedSubmissionIds(featureIds, session.user.id),
   ]);
 
-  const submissionsWithVotes = submissions.map((submission) => ({
-    ...submission,
-    voteCount: voteCounts.get(submission.id) ?? 0,
-    hasVoted: votedIds.has(submission.id),
-  })) as SubmissionWithVotes[];
-
-  const statCards = [
-    { label: "Total", value: stats.total, icon: Inbox, color: "text-white" },
-    { label: "Open", value: stats.open, icon: Inbox, color: "text-blue-400" },
-    {
-      label: "In Progress",
-      value: stats.inProgress,
-      icon: Inbox,
-      color: "text-amber-400",
-    },
-    { label: "Bugs", value: stats.bugs, icon: Bug, color: "text-red-400" },
-    { label: "Features", value: stats.features, icon: Sparkles, color: "text-violet-400" },
-    { label: "Users", value: stats.users, icon: Users, color: "text-emerald-400" },
-  ];
-
-  const chartStats: AdminStats = {
-    total: stats.total,
-    byStatus: {
-      open: stats.open,
-      inProgress: stats.inProgress,
-      review: stats.review,
-      complete: stats.complete,
-      canceled: stats.canceled,
-    },
-    byType: { bugs: stats.bugs, features: stats.features },
-    users: stats.users,
-    archived: stats.archived,
-    overdue: stats.overdue,
-    avgResolutionHours: stats.avgResolutionHours,
-    byProject: stats.byProject.map((row) => ({
-      project: row.project as string,
-      total: row.total,
-      open: row.open,
-    })),
-    trend: stats.trend,
+  // Serializable vote payload — Set does not survive dehydrate/JSON.
+  const votesPayload = {
+    counts: Object.fromEntries(counts),
+    votedIds: Array.from(votedIds),
   };
 
+  const queryClient = getQueryClient();
+  queryClient.setQueryData(queryKeys.adminStats, stats);
+  queryClient.setQueryData(
+    queryKeys.adminSubmissions,
+    submissions as SubmissionWithUser[],
+  );
+  queryClient.setQueryData(queryKeys.adminUsers, users);
+  queryClient.setQueryData(queryKeys.adminVotes, votesPayload);
+  queryClient.setQueryData(queryKeys.notifications.unread, unread);
+
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
-        <div className="mb-8 animate-fade-up">
-          <h1 className="font-display text-2xl font-700 text-white mb-1">Admin Dashboard</h1>
-          <p className="text-zinc-500 text-sm">All submissions across all users</p>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-8 animate-fade-up animate-fade-up-delay-1">
-          {statCards.map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 sm:p-4">
-              <div className={`font-display text-2xl font-700 ${color} mb-0.5`}>{value}</div>
-              <div className="text-xs text-zinc-500 flex items-center gap-1">
-                <Icon size={10} />
-                {label}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Charts */}
-        <div className="mb-8 animate-fade-up animate-fade-up-delay-2">
-          <StatsCharts stats={chartStats} />
-        </div>
-
-        {/* View toggle + content */}
-        <div className="animate-fade-up animate-fade-up-delay-2">
-          <AdminViewToggle
-            tableView={<AdminTable submissions={submissionsWithVotes} />}
-            kanbanView={<KanbanBoard submissions={submissionsWithVotes} />}
-          />
-        </div>
-
-        {/* User management */}
-        <div className="mt-8">
-          <UserManagement users={users} currentUserId={session.user.id} />
-        </div>
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6">
+        <HydrationBoundary state={dehydrate(queryClient)}>
+          <AdminHeader />
+          <AdminStatsSection />
+          <AdminSubmissionsSection />
+          <div className="mt-8">
+            <AdminUsersSection currentUserId={session.user.id} />
+          </div>
+        </HydrationBoundary>
       </main>
     </div>
   );

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { getVoteSummary, toggleVote } from "@/db/votes";
-import { getSubmissionById } from "@/db/submissions";
+import { countVotesBySubmission, getVoteSummary, listVotedSubmissionIds, toggleVote } from "@/db/votes";
+import { getSubmissionAccessRow } from "@/db/submissions";
 import { forbidden, notFound, protectedProcedure } from "@/orpc/context";
 
 const paramsSchema = z.object({ id: z.string() });
@@ -11,7 +11,7 @@ export const votesRouter = {
     .input(paramsSchema)
     .handler(async ({ input, context }) => {
       const { user } = context.auth;
-      const submission = await getSubmissionById(input.id);
+      const submission = await getSubmissionAccessRow(input.id);
       if (!submission) throw notFound();
       if (user.role !== "admin" && submission.userId !== user.id) throw forbidden();
 
@@ -28,10 +28,28 @@ export const votesRouter = {
     .input(paramsSchema)
     .handler(async ({ input, context }) => {
       const { user } = context.auth;
-      const submission = await getSubmissionById(input.id);
+      const submission = await getSubmissionAccessRow(input.id);
       if (!submission) throw notFound();
       if (user.role !== "admin" && submission.userId !== user.id) throw forbidden();
 
       return toggleVote(input.id, user.id);
+    }),
+
+  /**
+   * Batched vote state for a list of submissions (dashboard / admin board).
+   * One request per surface instead of one per feature row.
+   */
+  board: protectedProcedure
+    .route({ method: "GET", path: "/submissions/votes" })
+    .input(z.object({ ids: z.array(z.string()) }))
+    .handler(async ({ input, context }) => {
+      const [counts, votedIds] = await Promise.all([
+        countVotesBySubmission(input.ids),
+        listVotedSubmissionIds(input.ids, context.auth.user.id),
+      ]);
+      return {
+        counts: Object.fromEntries(counts),
+        votedIds: Array.from(votedIds),
+      };
     }),
 };

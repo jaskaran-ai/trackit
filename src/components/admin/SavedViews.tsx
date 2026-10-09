@@ -1,17 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Bookmark, BookmarkPlus, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { Bookmark, BookmarkPlus, Trash2 } from "lucide-react";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
+import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import { Button } from "@/components/arc/button/button";
+import { Input } from "@/components/arc/input/input";
+import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
 import type { SavedViewFilters } from "@/db/views";
 import {
   useCreateSavedView,
   useDeleteSavedView,
   useSavedViews,
-  type SavedViewListItem as SavedView,
 } from "@/hooks/use-saved-views";
 
+/**
+ * Named filter presets. Creating one is a foreground action, so it is confirmed
+ * in place; deleting one is a destructive action on a row that will not come
+ * back, so it asks before it removes rather than after.
+ */
 export default function SavedViews({
   filters,
   onApply,
@@ -19,6 +26,7 @@ export default function SavedViews({
   filters: SavedViewFilters;
   onApply: (filters: SavedViewFilters) => void;
 }) {
+  const { toast } = useToastStack();
   const viewsQuery = useSavedViews();
   const createView = useCreateSavedView();
   const deleteView = useDeleteSavedView();
@@ -38,103 +46,95 @@ export default function SavedViews({
         onSuccess: () => {
           setName("");
           setNaming(false);
-          toast.success("View saved");
+          // The chip is in the list by now.
         },
-        onError: () => toast.error("Could not save view"),
+        onError: () => toast({ type: "error", title: "Could not save the view" }),
       },
     );
   };
 
   const handleDelete = (id: string) => {
     deleteView.mutate(id, {
-      onSuccess: () => toast.success("View deleted"),
-      onError: () => toast.error("Could not delete view"),
+      // The chip is gone; a toast saying so would be redundant.
+      onError: () => toast({ type: "error", title: "Could not delete the view" }),
     });
   };
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      <span className="text-[11px] text-zinc-600 hidden sm:inline">Saved</span>
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="hidden text-xs text-muted sm:inline">Saved</span>
 
       {loading ? (
-        <div className="h-6 w-16 rounded-lg bg-zinc-800 animate-pulse" />
+        <Skeleton lines={1} label="Loading saved views" />
       ) : (
         views.map((view) => (
           <span
             key={view.id}
-            className="group inline-flex items-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800 pl-2 pr-1 py-1 text-xs text-zinc-300"
+            className="inline-flex items-center rounded-control border border-border bg-surface-muted"
           >
             <button
               type="button"
               onClick={() => onApply(view.filters)}
-              className="flex cursor-pointer items-center gap-1 transition-colors hover:text-white"
+              className="flex cursor-pointer items-center gap-1 py-1 pl-2 pr-1.5 text-xs text-secondary transition-colors hover:text-foreground"
             >
-              <Bookmark size={11} />
+              <Bookmark size={11} aria-hidden />
               {view.name}
             </button>
-            <button
-              type="button"
-              onClick={() => handleDelete(view.id)}
-              aria-label={`Delete ${view.name}`}
-              className="ml-0.5 cursor-pointer text-zinc-600 transition-colors hover:text-red-400"
-            >
-              <X size={12} />
-            </button>
+            {/* The control is icon only, so its resting label is the accessible
+                name. There is no `aria-label` prop to reach for. */}
+            <ConfirmMorph
+              className="mr-1.5"
+              label={<span className="sr-only">Delete</span>}
+              icon={<Trash2 size={11} aria-hidden />}
+              prompt={`Delete "${view.name}"?`}
+              confirmLabel="Delete"
+              onConfirm={() => handleDelete(view.id)}
+            />
           </span>
         ))
       )}
 
       {naming ? (
-        <span className="inline-flex items-center gap-1">
-          <input
+        <form
+          className="flex items-end gap-1.5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleSave();
+          }}
+        >
+          <Input
             autoFocus
+            label="View name"
+            className="w-36"
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSave();
-              if (e.key === "Escape") {
-                setNaming(false);
-                setName("");
-              }
-            }}
-            placeholder="View name"
-            className="w-32 rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-indigo-500/60"
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Open bugs"
           />
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={createView.isPending || !name.trim()}
-            className={cn(
-              "cursor-pointer rounded-md p-1 transition-colors",
-              createView.isPending || !name.trim()
-                ? "text-zinc-600"
-                : "text-emerald-400 hover:text-emerald-300"
-            )}
-            aria-label="Save view"
+          <Button
+            type="submit"
+            size="sm"
+            loading={createView.isPending}
+            disabled={!name.trim()}
           >
-            <Check size={13} />
-          </button>
-          <button
+            Save
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => {
               setNaming(false);
               setName("");
             }}
-            className="cursor-pointer rounded-md p-1 text-zinc-500 transition-colors hover:text-zinc-300"
-            aria-label="Cancel"
           >
-            <X size={13} />
-          </button>
-        </span>
+            Cancel
+          </Button>
+        </form>
       ) : (
-        <button
-          type="button"
-          onClick={() => setNaming(true)}
-          className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-200"
-        >
-          <BookmarkPlus size={12} />
+        <Button variant="secondary" size="sm" onClick={() => setNaming(true)}>
+          <BookmarkPlus size={12} aria-hidden />
           Save view
-        </button>
+        </Button>
       )}
     </div>
   );

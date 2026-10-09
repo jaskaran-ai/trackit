@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { RotateCcw, Trash2, Inbox } from "lucide-react";
 import { StatusBadge, TypeBadge, ProjectBadge } from "@/components/shared/Badges";
 import { cn, formatDate } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import type { SubmissionWithUser } from "@/types";
 import {
   useArchivedSubmissions,
@@ -30,14 +30,14 @@ function ArchivedRow({
   const archivedDate = submission.deletedAt ?? submission.updatedAt;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/60 px-4 py-3 transition-colors last:border-b-0 hover:bg-zinc-800/30">
+    <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-[var(--border-subtle)]/60 px-3 py-2.5 transition-colors last:border-b-0 hover:bg-surface-muted/30">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-zinc-200">{submission.title}</p>
+        <p className="truncate text-sm text-foreground">{submission.title}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <StatusBadge status={submission.status} />
           <TypeBadge type={submission.type} />
           <ProjectBadge project={submission.project} />
-          <span className="text-[11px] text-zinc-600">
+          <span className="text-xs text-muted">
             archived {formatDate(archivedDate)}
           </span>
         </div>
@@ -49,11 +49,11 @@ function ArchivedRow({
               className="h-4 w-4 rounded-full"
             />
           ) : (
-            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[8px] font-600 text-white">
+            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-accent text-accent-foreground">
               {submission.user.name?.[0]}
             </div>
           )}
-          <span className="truncate text-xs text-zinc-500">
+          <span className="truncate text-xs text-muted">
             {submission.user.name}
           </span>
         </div>
@@ -64,7 +64,7 @@ function ArchivedRow({
           type="button"
           onClick={onRestore}
           disabled={busy}
-          className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-xs font-500 text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-100 disabled:cursor-not-allowed disabled:text-zinc-600"
+          className="inline-flex cursor-pointer items-center gap-1 rounded-control border border-border bg-surface-muted px-2.5 py-1 text-xs font-500 text-secondary transition-colors hover:border-border-strong hover:text-foreground disabled:cursor-not-allowed disabled:text-muted"
         >
           <RotateCcw size={12} />
           Restore
@@ -74,10 +74,10 @@ function ArchivedRow({
           onClick={confirming ? onConfirmDelete : onRequestDelete}
           disabled={busy}
           className={cn(
-            "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-500 transition-all",
+            "inline-flex items-center gap-1 rounded-control border px-2.5 py-1 text-xs font-500 transition-all",
             confirming
-              ? "cursor-pointer border-red-600 bg-red-500 text-white"
-              : "cursor-pointer border-zinc-700 bg-transparent text-zinc-400 hover:border-red-500/50 hover:text-red-400 disabled:cursor-not-allowed disabled:text-zinc-600"
+              ? "cursor-pointer border-red-600 bg-red-500 text-foreground"
+              : "cursor-pointer border-border bg-transparent text-secondary hover:border-red-500/50 hover:text-red-400 disabled:cursor-not-allowed disabled:text-muted"
           )}
         >
           <Trash2 size={12} />
@@ -93,6 +93,7 @@ export default function ArchivedList({
 }: {
   submissions: SubmissionWithUser[];
 }) {
+  const { toast } = useToastStack();
   const archived = useArchivedSubmissions(submissions);
   const restore = useRestoreArchivedSubmission();
   const destroy = useDeleteArchivedSubmission();
@@ -121,8 +122,8 @@ export default function ArchivedList({
   const handleRestore = (id: string) => {
     setBusyId(id);
     restore.mutate(id, {
-      onSuccess: () => toast.success("Submission restored"),
-      onError: () => toast.error("Could not restore submission"),
+      // It is back in the list; nothing else needs saying.
+      onError: () => toast({ type: "error", title: "Could not restore the submission" }),
       onSettled: () => setBusyId(null),
     });
   };
@@ -131,20 +132,20 @@ export default function ArchivedList({
     setConfirmDeleteId(null);
     setBusyId(id);
     destroy.mutate(id, {
-      onSuccess: () => toast.success("Deleted permanently"),
-      onError: () => toast.error("Could not delete submission"),
+      // It is gone from the archive.
+      onError: () => toast({ type: "error", title: "Could not delete the submission" }),
       onSettled: () => setBusyId(null),
     });
   };
 
   if (rows.length === 0) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-12 text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800">
-          <Inbox size={22} className="text-zinc-600" />
+      <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-12 text-center">
+        <div className="mx-auto mb-2.5 flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
+          <Inbox size={22} className="text-muted" />
         </div>
-        <p className="text-sm text-zinc-400">Nothing is archived</p>
-        <p className="mt-1 text-xs text-zinc-600">
+        <p className="text-sm text-secondary">Nothing is archived</p>
+        <p className="mt-1 text-xs text-muted">
           Soft-deleted submissions will show up here.
         </p>
       </div>
@@ -152,11 +153,11 @@ export default function ArchivedList({
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-      <div className="border-b border-zinc-800 px-4 py-2.5 text-xs text-zinc-500">
+    <div className="bg-surface border border-[var(--border-subtle)] rounded-panel overflow-hidden">
+      <div className="border-b border-[var(--border-subtle)] px-3 py-2 text-xs text-muted">
         {rows.length} archived submission{rows.length !== 1 ? "s" : ""}
       </div>
-      <div className="divide-y divide-zinc-800/60">
+      <div className="divide-y divide-[var(--border-subtle)]/60">
         {rows.map((s) => (
           <ArchivedRow
             key={s.id}

@@ -22,6 +22,15 @@ export const notificationsRouter = {
       return { notifications, unread };
     }),
 
+  /** Lightweight unread badge count without loading notification rows. */
+  unreadCount: protectedProcedure
+    .route({ method: "GET", path: "/notifications/unread" })
+    .input(z.void().optional())
+    .handler(async ({ context }) => {
+      const unread = await countUnreadNotifications(context.auth.user.id);
+      return { unread };
+    }),
+
   /** Marks one notification read, or all of them when `all` is set. */
   markRead: protectedProcedure
     .route({ method: "POST", path: "/notifications" })

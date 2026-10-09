@@ -1,7 +1,12 @@
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { getSubmissionById } from "@/db/submissions";
+import { listComments } from "@/db/comments";
+import { listHistory } from "@/db/history";
+import { getVoteSummary } from "@/db/votes";
+import { getQueryClient, queryKeys } from "@/lib/query-client";
 import Navbar from "@/components/shared/Navbar";
 import { StatusBadge, TypeBadge, PriorityBadge } from "@/components/shared/Badges";
 import VoteButton from "@/components/shared/VoteButton";
@@ -29,90 +34,110 @@ export default async function SubmissionDetailPage({
   const isOwner = submission.userId === session.user.id;
   if (!isAdmin && !isOwner) redirect("/dashboard");
 
+  const [comments, history, vote] = await Promise.all([
+    listComments(id),
+    listHistory(id),
+    submission.type === "FEATURE"
+      ? getVoteSummary(id, session.user.id)
+      : Promise.resolve(null),
+  ]);
+
+  const queryClient = getQueryClient();
+  queryClient.setQueryData(queryKeys.comments(id), comments);
+  queryClient.setQueryData(queryKeys.history(id), history);
+
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-3xl mx-auto px-3 sm:px-5 py-6">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-6"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors mb-5"
         >
           <ChevronLeft size={15} />
           Back to dashboard
         </Link>
 
-        <div className="animate-fade-up">
-          {/* Header */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-4">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <h1 className="font-display text-xl font-700 text-white leading-snug flex-1">
-                {submission.title}
-              </h1>
-              <div className="flex items-center gap-2 shrink-0">
-                <StatusBadge status={submission.status} />
-                {submission.type === "FEATURE" && (
-                  <VoteButton submissionId={submission.id} size="md" />
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mb-5">
-              <TypeBadge type={submission.type} />
-              <PriorityBadge priority={submission.priority} />
-            </div>
-
-            <div className="flex items-center gap-3 pt-4 border-t border-zinc-800">
-              {submission.user.image ? (
-                <img
-                  src={submission.user.image}
-                  alt={submission.user.name}
-                  className="w-7 h-7 rounded-full"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-xs text-white font-600">
-                  {submission.user.name?.[0]}
+        <HydrationBoundary state={dehydrate(queryClient)}>
+          <div className="">
+            <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5 mb-3">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h1 className="font-display text-xl font-500 text-foreground leading-snug flex-1">
+                  {submission.title}
+                </h1>
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge status={submission.status} />
+                  {submission.type === "FEATURE" && (
+                    <VoteButton
+                      submissionId={submission.id}
+                      initialCount={vote?.count}
+                      initialHasVoted={vote?.hasVoted}
+                      size="md"
+                    />
+                  )}
                 </div>
-              )}
-              <div>
-                <p className="text-xs font-500 text-zinc-300">{submission.user.name}</p>
-                <p className="text-xs text-zinc-600">{formatDate(submission.createdAt)}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mb-4">
+                <TypeBadge type={submission.type} />
+                <PriorityBadge priority={submission.priority} />
+              </div>
+
+              <div className="flex items-center gap-2.5 pt-4 border-t border-[var(--border-subtle)]">
+                {submission.user.image ? (
+                  <img
+                    src={submission.user.image}
+                    alt={submission.user.name}
+                    className="w-7 h-7 rounded-full"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-accent text-accent-foreground font-500">
+                    {submission.user.name?.[0]}
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-500 text-secondary">
+                    {submission.user.name}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {formatDate(submission.createdAt)}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Description */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-4">
-            <h2 className="font-display text-sm font-600 text-zinc-400 uppercase tracking-wider mb-4">
-              Description
-            </h2>
-            <div
-              className="prose-dark text-sm text-zinc-300"
-              dangerouslySetInnerHTML={{ __html: submission.description }}
+            <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5 mb-3">
+              <h2 className="font-display text-sm font-500 text-secondary mb-3">
+                Description
+              </h2>
+              <div
+                className="prose-dark text-sm text-secondary"
+                dangerouslySetInnerHTML={{ __html: submission.description }}
+              />
+            </div>
+
+            {submission.attachments.length > 0 && (
+              <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5 mb-3">
+                <h2 className="font-display text-sm font-500 text-secondary mb-3 flex items-center gap-2">
+                  <Paperclip size={13} />
+                  Attachments ({submission.attachments.length})
+                </h2>
+                <AttachmentList attachments={submission.attachments} />
+              </div>
+            )}
+
+            <StatusHistory submissionId={submission.id} />
+
+            <CommentsSection
+              submissionId={submission.id}
+              currentUserId={session.user.id}
+              currentUserName={session.user.name}
+              currentUserImage={session.user.image}
+              isAdmin={isAdmin}
             />
           </div>
-
-          {/* Attachments */}
-          {submission.attachments.length > 0 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-4">
-              <h2 className="font-display text-sm font-600 text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Paperclip size={13} />
-                Attachments ({submission.attachments.length})
-              </h2>
-              <AttachmentList attachments={submission.attachments} />
-            </div>
-          )}
-
-          {/* Audit trail */}
-          <StatusHistory submissionId={submission.id} />
-
-          {/* Discussion */}
-          <CommentsSection
-            submissionId={submission.id}
-            currentUserId={session.user.id}
-            isAdmin={isAdmin}
-          />
-        </div>
+        </HydrationBoundary>
       </main>
     </div>
   );

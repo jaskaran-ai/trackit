@@ -5,6 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Prefers `_count.attachments` from lean list rows; falls back to array length. */
+export function submissionAttachmentCount(s: {
+  attachments?: { length: number };
+  _count?: { attachments?: number };
+}): number {
+  if (typeof s._count?.attachments === "number") return s._count.attachments;
+  return s.attachments?.length ?? 0;
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
@@ -22,42 +31,6 @@ export function formatDate(date: Date | string): string {
     minute: "2-digit",
   });
 }
-
-export const STATUS_COLORS = {
-  OPEN: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  IN_PROGRESS: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  REVIEW: "bg-violet-500/15 text-violet-400 border-violet-500/30",
-  COMPLETE: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  CANCELED: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
-} as const;
-
-export const STATUS_LABELS: Record<string, string> = {
-  OPEN: "Open",
-  IN_PROGRESS: "In Progress",
-  REVIEW: "Review",
-  COMPLETE: "Complete",
-  CANCELED: "Canceled",
-};
-
-export const PROJECT_LABELS: Record<string, string> = {
-  IVALT_MOBILE: "iVALT Mobile App",
-  DOCU_ID: "DocuID",
-  ONDEMAND_ID: "OndemandID",
-  KEYCLOCK: "KeyClock",
-  OTHER: "Other",
-};
-
-export const PRIORITY_COLORS = {
-  LOW: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
-  MEDIUM: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  HIGH: "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  CRITICAL: "bg-red-500/15 text-red-400 border-red-500/30",
-} as const;
-
-export const TYPE_COLORS = {
-  BUG: "bg-red-500/15 text-red-400 border-red-500/30",
-  FEATURE: "bg-violet-500/15 text-violet-400 border-violet-500/30",
-} as const;
 
 export const ACCEPTED_FILE_TYPES = {
   "image/png": [".png"],

@@ -12,16 +12,30 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { db } from "./index";
-import { attachment, submission, user } from "./schema";
+import {
+  attachment,
+  notification,
+  submission,
+  submissionHistory,
+  user,
+} from "./schema";
 import { logFieldChanges, logHistory } from "./history";
 import { createNotification } from "./notifications";
 import type { Priority, Project, SubmissionStatus, SubmissionType } from "./types";
+
+export const DEFAULT_LIST_LIMIT = 200;
 
 const submissionWithUserAndAttachments = {
   user: {
     columns: { id: true, name: true, email: true, image: true },
   },
   attachments: true,
+} as const;
+
+const submissionWithUserOnly = {
+  user: {
+    columns: { id: true, name: true, email: true, image: true },
+  },
 } as const;
 
 export type SubmissionFilters = {
@@ -37,6 +51,10 @@ export type SubmissionFilters = {
   offset?: number;
   /** Archived (soft-deleted) submissions are hidden unless this is set. */
   includeDeleted?: boolean;
+  /** Omit heavy description + attachments; default true for list callers. */
+  lean?: boolean;
+  /** Skip DEFAULT_LIST_LIMIT (export/archived full dumps). */
+  unlimited?: boolean;
 };
 
 export type SortKey =
@@ -119,13 +137,52 @@ function buildSubmissionOrderBy(filters: SubmissionFilters): SQL[] {
 }
 
 export async function listSubmissions(filters: SubmissionFilters = {}) {
-  return db.query.submission.findMany({
+  const lean = filters.lean ?? true;
+  const limit =
+    filters.limit ??
+    (filters.unlimited ? undefined : DEFAULT_LIST_LIMIT);
+
+  if (!lean) {
+    return db.query.submission.findMany({
+      where: buildSubmissionWhere(filters),
+      with: submissionWithUserAndAttachments,
+      orderBy: buildSubmissionOrderBy(filters),
+      ...(limit !== undefined ? { limit } : {}),
+      ...(filters.offset ? { offset: filters.offset } : {}),
+    });
+  }
+
+  const rows = await db.query.submission.findMany({
     where: buildSubmissionWhere(filters),
-    with: submissionWithUserAndAttachments,
+    columns: {
+      id: true,
+      type: true,
+      title: true,
+      status: true,
+      priority: true,
+      project: true,
+      userId: true,
+      dueDate: true,
+      resolvedAt: true,
+      deletedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    with: submissionWithUserOnly,
     orderBy: buildSubmissionOrderBy(filters),
-    ...(filters.limit ? { limit: filters.limit } : {}),
+    ...(limit !== undefined ? { limit } : {}),
     ...(filters.offset ? { offset: filters.offset } : {}),
   });
+
+  const ids = rows.map((row) => row.id);
+  const attachmentCounts = await countAttachmentsBySubmission(ids);
+
+  return rows.map((row) => ({
+    ...row,
+    description: "",
+    attachments: [] as [],
+    _count: { attachments: attachmentCounts.get(row.id) ?? 0 },
+  }));
 }
 
 export async function getSubmissionById(id: string) {
@@ -133,6 +190,21 @@ export async function getSubmissionById(id: string) {
     where: eq(submission.id, id),
     with: submissionWithUserAndAttachments,
   });
+}
+
+/** Light access check — id/owner/title only, no relations. */
+export async function getSubmissionAccessRow(id: string) {
+  const [row] = await db
+    .select({
+      id: submission.id,
+      userId: submission.userId,
+      title: submission.title,
+    })
+    .from(submission)
+    .where(eq(submission.id, id))
+    .limit(1);
+
+  return row ?? null;
 }
 
 /** Ignores soft-delete scope — used by the restore flow. */
@@ -362,6 +434,254 @@ export async function listAttachmentsForSubmission(submissionId: string) {
   });
 }
 
+export async function listAttachmentsForSubmissions(ids: string[]) {
+  if (ids.length === 0) return [];
+  return db.query.attachment.findMany({
+    where: inArray(attachment.submissionId, ids),
+  });
+}
+
+/** Attachment counts for many submissions in one round trip. */
+async function countAttachmentsBySubmission(submissionIds: string[]) {
+  if (submissionIds.length === 0) return new Map<string, number>();
+
+  const rows = await db
+    .select({
+      submissionId: attachment.submissionId,
+      value: sql<number>`count(*)::int`,
+    })
+    .from(attachment)
+    .where(inArray(attachment.submissionId, submissionIds))
+    .groupBy(attachment.submissionId);
+
+  return new Map(rows.map((row) => [row.submissionId, Number(row.value)]));
+}
+
+// ---------------------------------------------------------------------------
+// Bulk writers — one select, one update, batched history/notifications
+// ---------------------------------------------------------------------------
+
+export async function bulkUpdateSubmissions(
+  ids: string[],
+  data: { status?: SubmissionStatus; priority?: Priority },
+  actorId: string,
+): Promise<number> {
+  if (ids.length === 0) return 0;
+  if (data.status === undefined && data.priority === undefined) return 0;
+
+  const targets = await db
+    .select({
+      id: submission.id,
+      userId: submission.userId,
+      title: submission.title,
+      status: submission.status,
+      priority: submission.priority,
+      resolvedAt: submission.resolvedAt,
+    })
+    .from(submission)
+    .where(inArray(submission.id, ids));
+
+  if (targets.length === 0) return 0;
+
+  const now = new Date();
+  const changed = targets.filter((row) => {
+    if (data.status !== undefined && data.status !== row.status) return true;
+    if (data.priority !== undefined && data.priority !== row.priority) return true;
+    return false;
+  });
+
+  if (changed.length === 0) return 0;
+
+  const changedIds = changed.map((row) => row.id);
+
+  const patch: {
+    updatedAt: Date;
+    status?: SubmissionStatus;
+    priority?: Priority;
+    resolvedAt?: SQL | Date | null;
+  } = {
+    updatedAt: now,
+  };
+  if (data.status !== undefined) patch.status = data.status;
+  if (data.priority !== undefined) patch.priority = data.priority;
+
+  // resolvedAt mirrors updateSubmission: set on enter resolved, clear on leave,
+  // leave alone when staying within resolved/unresolved. RHS "status" is the
+  // pre-update value in Postgres SET expressions.
+  if (data.status !== undefined) {
+    const isNowResolved = RESOLVED_STATUSES.includes(data.status);
+    if (isNowResolved) {
+      patch.resolvedAt = sql`case when "status" in ('COMPLETE', 'CANCELED') then "resolvedAt" else ${now} end`;
+    } else {
+      patch.resolvedAt = sql`case when "status" in ('COMPLETE', 'CANCELED') then null else "resolvedAt" end`;
+    }
+  }
+
+  await db
+    .update(submission)
+    .set(patch)
+    .where(inArray(submission.id, changedIds));
+
+  const historyRows: Array<typeof submissionHistory.$inferInsert> = [];
+  for (const row of changed) {
+    if (data.status !== undefined && data.status !== row.status) {
+      historyRows.push({
+        id: createId(),
+        submissionId: row.id,
+        changedById: actorId,
+        field: "status",
+        fromValue: row.status,
+        toValue: data.status,
+        createdAt: now,
+      });
+    }
+    if (data.priority !== undefined && data.priority !== row.priority) {
+      historyRows.push({
+        id: createId(),
+        submissionId: row.id,
+        changedById: actorId,
+        field: "priority",
+        fromValue: row.priority,
+        toValue: data.priority,
+        createdAt: now,
+      });
+    }
+  }
+
+  if (historyRows.length > 0) {
+    await db.insert(submissionHistory).values(historyRows);
+  }
+
+  const notificationRows: Array<typeof notification.$inferInsert> = [];
+  for (const row of changed) {
+    if (actorId === row.userId) continue;
+    const parts: string[] = [];
+    if (data.status !== undefined && data.status !== row.status) {
+      parts.push(`status → ${data.status}`);
+    }
+    if (data.priority !== undefined && data.priority !== row.priority) {
+      parts.push(`priority → ${data.priority}`);
+    }
+    if (parts.length === 0) continue;
+    notificationRows.push({
+      id: createId(),
+      userId: row.userId,
+      submissionId: row.id,
+      type: "submission_updated",
+      title: row.title,
+      body: parts.join(", "),
+      createdAt: now,
+    });
+  }
+
+  if (notificationRows.length > 0) {
+    await db.insert(notification).values(notificationRows);
+  }
+
+  return changed.length;
+}
+
+export async function bulkArchiveSubmissions(
+  ids: string[],
+  actorId: string,
+): Promise<number> {
+  if (ids.length === 0) return 0;
+
+  const targets = await db
+    .select({
+      id: submission.id,
+      title: submission.title,
+      deletedAt: submission.deletedAt,
+    })
+    .from(submission)
+    .where(inArray(submission.id, ids));
+
+  const live = targets.filter((row) => row.deletedAt == null);
+  if (live.length === 0) return 0;
+
+  const now = new Date();
+  const liveIds = live.map((row) => row.id);
+
+  await db
+    .update(submission)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(inArray(submission.id, liveIds));
+
+  await db.insert(submissionHistory).values(
+    live.map((row) => ({
+      id: createId(),
+      submissionId: row.id,
+      changedById: actorId,
+      field: "archived",
+      fromValue: null,
+      toValue: row.title,
+      createdAt: now,
+    })),
+  );
+
+  return live.length;
+}
+
+export async function bulkRestoreSubmissions(
+  ids: string[],
+  actorId: string,
+): Promise<number> {
+  if (ids.length === 0) return 0;
+
+  const targets = await db
+    .select({
+      id: submission.id,
+      title: submission.title,
+      deletedAt: submission.deletedAt,
+    })
+    .from(submission)
+    .where(inArray(submission.id, ids));
+
+  const archived = targets.filter((row) => row.deletedAt != null);
+  if (archived.length === 0) return 0;
+
+  const now = new Date();
+  const archivedIds = archived.map((row) => row.id);
+
+  await db
+    .update(submission)
+    .set({ deletedAt: null, updatedAt: now })
+    .where(inArray(submission.id, archivedIds));
+
+  await db.insert(submissionHistory).values(
+    archived.map((row) => ({
+      id: createId(),
+      submissionId: row.id,
+      changedById: actorId,
+      field: "restored",
+      fromValue: null,
+      toValue: row.title,
+      createdAt: now,
+    })),
+  );
+
+  return archived.length;
+}
+
+export async function bulkHardDeleteSubmissions(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+
+  const targets = await db
+    .select({ id: submission.id })
+    .from(submission)
+    .where(inArray(submission.id, ids));
+
+  if (targets.length === 0) return 0;
+
+  const targetIds = targets.map((row) => row.id);
+  const rows = await db
+    .delete(submission)
+    .where(inArray(submission.id, targetIds))
+    .returning({ id: submission.id });
+
+  return rows.length;
+}
+
 // ---------------------------------------------------------------------------
 // Aggregates
 // ---------------------------------------------------------------------------
@@ -390,55 +710,64 @@ export async function getSubmissionStats(days = 30): Promise<SubmissionStats> {
 
   const live = sql`${submission.deletedAt} is null`;
 
-  const [byStatus, byType, byProject, totals, overdue, resolved, trend] =
-    await Promise.all([
-      db
-        .select({ status: submission.status, value: count() })
-        .from(submission)
-        .where(live)
-        .groupBy(submission.status),
-      db
-        .select({ type: submission.type, value: count() })
-        .from(submission)
-        .where(live)
-        .groupBy(submission.type),
-      db
-        .select({
-          project: submission.project,
-          total: sql<number>`count(*)::int`,
-          open: sql<number>`count(*) filter (where "submission"."status" = 'OPEN')::int`,
-        })
-        .from(submission)
-        .where(live)
-        .groupBy(submission.project),
-      db
-        .select({ value: count() })
-        .from(submission)
-        .where(live),
-      db
-        .select({ value: count() })
-        .from(submission)
-        .where(
-          and(
-            live,
-            sql`${submission.dueDate} is not null`,
-            sql`${submission.dueDate} < now()`,
-            notInArray(submission.status, RESOLVED_STATUSES),
-          ),
+  const [
+    byStatus,
+    byType,
+    byProject,
+    totals,
+    overdue,
+    resolved,
+    trend,
+    archivedRows,
+    usersCount,
+  ] = await Promise.all([
+    db
+      .select({ status: submission.status, value: count() })
+      .from(submission)
+      .where(live)
+      .groupBy(submission.status),
+    db
+      .select({ type: submission.type, value: count() })
+      .from(submission)
+      .where(live)
+      .groupBy(submission.type),
+    db
+      .select({
+        project: submission.project,
+        total: sql<number>`count(*)::int`,
+        open: sql<number>`count(*) filter (where "submission"."status" = 'OPEN')::int`,
+      })
+      .from(submission)
+      .where(live)
+      .groupBy(submission.project),
+    db
+      .select({ value: count() })
+      .from(submission)
+      .where(live),
+    db
+      .select({ value: count() })
+      .from(submission)
+      .where(
+        and(
+          live,
+          sql`${submission.dueDate} is not null`,
+          sql`${submission.dueDate} < now()`,
+          notInArray(submission.status, RESOLVED_STATUSES),
         ),
-      db
-        .select({
-          hours: sql<number>`avg(extract(epoch from ("submission"."resolvedAt" - "submission"."createdAt")) / 3600)`,
-        })
-        .from(submission)
-        .where(and(live, sql`${submission.resolvedAt} is not null`)),
-      getTrendRows(since),
-    ]);
-
-  const [archived] = await db
-    .select({ value: count() })
-    .from(submission)
-    .where(sql`${submission.deletedAt} is not null`);
+      ),
+    db
+      .select({
+        hours: sql<number>`avg(extract(epoch from ("submission"."resolvedAt" - "submission"."createdAt")) / 3600)`,
+      })
+      .from(submission)
+      .where(and(live, sql`${submission.resolvedAt} is not null`)),
+    getTrendRows(since),
+    db
+      .select({ value: count() })
+      .from(submission)
+      .where(sql`${submission.deletedAt} is not null`),
+    countUsers(),
+  ]);
 
   const statusCount = (status: SubmissionStatus) =>
     Number(byStatus.find((row) => row.status === status)?.value ?? 0);
@@ -454,8 +783,8 @@ export async function getSubmissionStats(days = 30): Promise<SubmissionStats> {
     canceled: statusCount("CANCELED"),
     bugs: typeCount("BUG"),
     features: typeCount("FEATURE"),
-    users: await countUsers(),
-    archived: Number(archived?.value ?? 0),
+    users: usersCount,
+    archived: Number(archivedRows[0]?.value ?? 0),
     overdue: Number(overdue[0]?.value ?? 0),
     avgResolutionHours:
       resolved[0]?.hours === null || resolved[0]?.hours === undefined

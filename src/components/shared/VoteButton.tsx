@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronUp } from "lucide-react";
+import { ArrowBigUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 
 interface VoteButtonProps {
   submissionId: string;
@@ -15,8 +15,8 @@ interface VoteButtonProps {
 type Summary = { count: number; hasVoted: boolean };
 
 const SIZES = {
-  sm: "h-6 px-2 gap-1 text-xs [&_svg]:size-3",
-  md: "h-8 px-3 gap-1.5 text-sm [&_svg]:size-3.5",
+  sm: "h-7 px-2 gap-1 text-xs [&_svg]:size-3",
+  md: "h-9 px-2.5 gap-1.5 text-sm [&_svg]:size-4",
 } as const;
 
 export default function VoteButton({
@@ -27,6 +27,7 @@ export default function VoteButton({
 }: VoteButtonProps) {
   const needsHydration = initialCount === undefined || initialHasVoted === undefined;
 
+  const { toast } = useToastStack();
   const [count, setCount] = useState(initialCount ?? 0);
   const [hasVoted, setHasVoted] = useState(initialHasVoted ?? false);
   const [pending, setPending] = useState(false);
@@ -76,11 +77,11 @@ export default function VoteButton({
     } catch {
       setCount(previous.count);
       setHasVoted(previous.hasVoted);
-      toast.error("Could not update your vote");
+      toast({ type: "error", title: "Could not update your vote" });
     } finally {
       setPending(false);
     }
-  };
+  }
 
   return (
     <button
@@ -91,16 +92,15 @@ export default function VoteButton({
       aria-label={hasVoted ? "Remove upvote" : "Upvote this request"}
       title={hasVoted ? "Remove upvote" : "Upvote this request"}
       className={cn(
-        "inline-flex items-center justify-center rounded-full border font-500 transition-colors cursor-pointer select-none",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
-        "disabled:opacity-60 disabled:cursor-not-allowed",
+        "inline-flex cursor-pointer select-none items-center justify-center rounded-pill border font-500 transition-colors",
+        "disabled:cursor-not-allowed disabled:opacity-60",
         SIZES[size],
         hasVoted
-          ? "bg-indigo-500 border-indigo-500 text-white hover:bg-indigo-600"
-          : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
+          ? "border-accent bg-accent text-accent-foreground hover:opacity-90"
+          : "border-border bg-surface text-secondary hover:border-border-strong hover:text-foreground",
       )}
     >
-      <ChevronUp strokeWidth={2.5} />
+      <ArrowBigUp strokeWidth={2.5} aria-hidden />
       <span className="tabular-nums">{count}</span>
     </button>
   );

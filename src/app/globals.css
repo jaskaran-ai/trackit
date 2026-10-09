@@ -8,8 +8,14 @@
 @custom-variant light (&:where(.light, .light *));
 
 @theme {
-  --font-display: "Syne", sans-serif;
-  --font-body: "DM Sans", sans-serif;
+  /*
+ * `--font-display` and `--font-body` are not set here on purpose: Arc's
+ * foundation.css binds them to `--font-geist` and `--font-inter`, which the
+ * root layout loads via next/font. Declaring them in `@theme` as well would put
+ * two definitions on `:root` and this file would win, so Arc components would
+ * silently fall back to the old pair while the Tailwind `.font-display`
+ * utility kept resolving.
+ */
 
   --color-brand: #6366f1;
   --color-brand-light: #818cf8;
@@ -42,21 +48,26 @@
   --color-zinc-900: #18181b;
   --color-zinc-950: #09090b;
 
-  /* Accent. Indigo in both themes, one step darker in light (see below). */
-  --color-indigo-300: #a5b4fc;
-  --color-indigo-400: #818cf8;
-  --color-indigo-500: #6366f1;
-  --color-indigo-600: #4f46e5;
-  --color-indigo-700: #4338ca;
+  /*
+   * Accent ramp. These are only fallbacks: Arc's foundation.css owns `--accent`
+   * and `--accent-strong` per accent, and the `[data-accent]` block at the end
+   * of this file derives the indigo steps from them, so the `bg-indigo-*` and
+   * `text-indigo-*` utilities always match the Arc components beside them.
+   * They still have to be declared here for Tailwind to emit the utilities.
+   */
+  --color-indigo-300: #d4d4d8;
+  --color-indigo-400: #a1a1aa;
+  --color-indigo-500: #52525b;
+  --color-indigo-600: #3f3f46;
+  --color-indigo-700: #27272a;
 
   /*
-   * Semantic accent tokens (arc's set). `data-accent` on <html> remaps them,
-   * and every `bg-indigo-*` / `text-indigo-*` utility follows because Tailwind
-   * resolves those utilities through `--color-indigo-*`.
+   * Label colour for a filled accent control. Arc flips the ink per accent and
+   * per theme (dark accents take light ink, and in dark mode the accent itself
+   * is the light step, so the ink goes dark again), so this is a straight
+   * pointer at Arc's value rather than a second palette to maintain.
    */
-  --accent: #6366f1;
-  --accent-strong: #4f46e5;
-  --accent-on: #ffffff;
+  --accent-on: var(--accent-foreground, #ffffff);
 
   /* Status hues, shared by the badges in lib/utils. */
   --color-blue-300: #93c5fd;
@@ -80,6 +91,50 @@
   --color-red-600: #dc2626;
 
   --color-white: #ffffff;
+}
+
+/*
+ * Arc tokens, exposed as Tailwind utilities.
+ *
+ * Arc's components are CSS modules and read `--background`, `--surface`,
+ * `--text-secondary` and friends directly. Anything Arc does not cover, and any
+ * layout utility applied to an Arc component, needs those same values from a
+ * className, so they are mapped to the theme namespace here.
+ *
+ * `inline` is required, not stylistic. Without it Tailwind emits
+ * `var(--color-secondary)` and resolves that where the theme variable is
+ * declared, on `:root`, where `--text-secondary` is defined too, so it happens
+ * to work today. With `inline` the utility emits `var(--text-secondary)`
+ * directly, which is what keeps the value correct on any element and under any
+ * theme or accent that re-points it further down the tree.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-muted: var(--surface-muted);
+
+  --color-foreground: var(--foreground);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --radius-control: var(--radius-control);
+  --radius-panel: var(--radius-panel);
+  --radius-surface: var(--radius-surface);
+  --radius-pill: var(--radius-pill);
 }
 
 /*
@@ -110,11 +165,14 @@ html.light {
   --color-zinc-900: #ffffff;
   --color-zinc-950: #f4f4f5;
 
-  --color-indigo-300: #4338ca;
-  --color-indigo-400: #4f46e5;
-  --color-indigo-500: #4f46e5;
-  --color-indigo-600: #4338ca;
-  --color-indigo-700: #3730a3;
+  /*
+   * The indigo ramp is not restated here: Arc already darkens `--accent` for
+   * light mode, and the `[data-accent]` block at the end of this file derives
+   * the steps from it, so there is one accent definition rather than two.
+
+   * Status hues below are a different family and keep their meaning, which is
+   * why they are still literal values.
+   */
 
   --color-blue-300: #1d4ed8;
   --color-blue-400: #2563eb;
@@ -165,100 +223,40 @@ html.light .bg-white.text-zinc-900 {
 }
 
 /* ---------------------------------------------------------------------------
- * Accent palette
+ * Accent ramp, derived
  *
- * `data-accent` on <html> remaps the indigo variables, and every Tailwind
- * `bg-indigo-*` / `text-indigo-*` / `border-indigo-*` utility resolves through
- * them, so the whole app follows the chosen accent with no component edits.
- * Status hues (blue, amber, violet, emerald, red) are a different family and
- * keep their meaning, which is why only indigo is remapped.
+ * Arc's foundation.css owns the palette: `:root[data-accent="violet"]` and the
+ * matching `[data-theme="dark"]` rules set `--accent` and `--accent-strong`
+ * per accent per theme. There is deliberately no second palette here to fall
+ * out of step with it.
  *
- * Two ramps per accent, because contrast differs by theme:
- *   --d-*  dark theme, the default
- *   --l-*  light theme, where accent text sits on a near-white surface, so the
- *          shades drop two steps darker and the fill darkens enough that a
- *          white label clears AA (4.5:1)
- * Amber and green keep their bright fill in dark mode and switch to dark ink
- * through --accent-on, because white on those hues fails.
+ * What this block adds is the bridge to the Tailwind utilities that predate
+ * Arc. `bg-indigo-500` and friends resolve through `--color-indigo-500`, so
+ * deriving that variable from `--accent` is what keeps an older indigo button
+ * the same colour as an Arc button beside it. As each component moves onto
+ * Arc its indigo utilities go with it, and this block shrinks.
+ *
+ * The 300 and 400 steps are tints mixed toward the theme's own foreground:
+ * light in dark mode, dark in light mode. That direction is what keeps a muted
+ * accent label readable on `--background` in either theme, which is why no
+ * per-accent hand-tuning is needed here.
  * --------------------------------------------------------------------------- */
 
-[data-accent="indigo"] {
-  --d-300: #a5b4fc; --d-400: #818cf8; --d-500: #6366f1; --d-600: #4f46e5;
-  --accent-on: #ffffff;
-  --l-300: #4338ca; --l-400: #4f46e5; --l-500: #4f46e5; --l-600: #4338ca;
-}
-[data-accent="violet"] {
-  --d-300: #c4b5fd; --d-400: #a78bfa; --d-500: #8b5cf6; --d-600: #7c3aed;
-  --accent-on: #ffffff;
-  --l-300: #6d28d9; --l-400: #6d28d9; --l-500: #6d28d9; --l-600: #5b21b6;
-}
-[data-accent="blue"] {
-  --d-300: #93c5fd; --d-400: #60a5fa; --d-500: #3b82f6; --d-600: #2563eb;
-  --accent-on: #ffffff;
-  --l-300: #1d4ed8; --l-400: #1d4ed8; --l-500: #1d4ed8; --l-600: #1e40af;
-}
-[data-accent="green"] {
-  --d-300: #86efac; --d-400: #4ade80; --d-500: #22c55e; --d-600: #16a34a;
-  --accent-on: #052e16;
-  --l-300: #15803d; --l-400: #15803d; --l-500: #15803d; --l-600: #166534;
-}
-[data-accent="amber"] {
-  --d-300: #fcd34d; --d-400: #fbbf24; --d-500: #f59e0b; --d-600: #d97706;
-  --accent-on: #1c1917;
-  --l-300: #b45309; --l-400: #b45309; --l-500: #b45309; --l-600: #92400e;
-}
-[data-accent="orange"] {
-  --d-300: #fdba74; --d-400: #fb923c; --d-500: #f97316; --d-600: #ea580c;
-  --accent-on: #ffffff;
-  --l-300: #c2410c; --l-400: #c2410c; --l-500: #c2410c; --l-600: #9a3412;
-}
-[data-accent="coral"] {
-  --d-300: #fecdd3; --d-400: #fda4af; --d-500: #fb7185; --d-600: #f43f5e;
-  --accent-on: #ffffff;
-  --l-300: #be123c; --l-400: #be123c; --l-500: #be123c; --l-600: #9f1239;
-}
-[data-accent="rose"] {
-  --d-300: #fda4af; --d-400: #fb7185; --d-500: #f43f5e; --d-600: #e11d48;
-  --accent-on: #ffffff;
-  --l-300: #be123c; --l-400: #be123c; --l-500: #be123c; --l-600: #9f1239;
-}
-[data-accent="neutral"] {
-  --d-300: #d4d4d8; --d-400: #a1a1aa; --d-500: #71717a; --d-600: #52525b;
-  --accent-on: #ffffff;
-  --l-300: #3f3f46; --l-400: #3f3f46; --l-500: #3f3f46; --l-600: #27272a;
-}
-
-/* Dark theme: the --d-* ramp wins. */
 [data-accent] {
-  --color-indigo-300: var(--d-300);
-  --color-indigo-400: var(--d-400);
-  --color-indigo-500: var(--d-500);
-  --color-indigo-600: var(--d-600);
-  --accent: var(--d-500);
-  --accent-strong: var(--d-600);
+  --color-indigo-500: var(--accent);
+  --color-indigo-600: var(--accent-strong);
+  --color-indigo-700: var(--accent-strong);
+  --color-indigo-400: color-mix(in oklab, var(--accent) 76%, var(--foreground));
+  --color-indigo-300: color-mix(in oklab, var(--accent) 54%, var(--foreground));
 }
 
-/* Light theme outranks the block above. Two rules: `.light[data-accent]`
-   covers the root, and the spaced one covers an inner element scoped for a
-   swatch preview, which must inherit the light ramp not the dark one. */
-.light[data-accent],
-.light [data-accent] {
-  --color-indigo-300: var(--l-300);
-  --color-indigo-400: var(--l-400);
-  --color-indigo-500: var(--l-500);
-  --color-indigo-600: var(--l-600);
-  --accent: var(--l-500);
-  --accent-strong: var(--l-600);
-  /* Light fills are already the darker 700 step, so every hue clears AA with
-     white ink — including amber and green, which need dark ink on dark. */
-  --accent-on: #ffffff;
-}
-
-/* A shared accent ring for keyboard focus only. */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+/*
+ * Focus is Arc's rule, not ours. foundation.css draws a softened accent outline
+ * on :focus-visible, drops it for pointer focus, and deliberately excludes text
+ * fields (which show focus with their border and caret) and menu items (which
+ * show it with their highlight fill). A blanket rule here would override all of
+ * that, so the old global :focus-visible outline has been removed.
+ */
 
 * {
   box-sizing: border-box;
@@ -431,5 +429,46 @@ body {
   .animate-fade-up-delay-4 {
     animation: none;
     opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Loading placeholder
+ *
+ * Arc's `Skeleton` covers text-shaped placeholders and should be used directly
+ * for those. Rectangles need a shape it does not offer, so this class carries
+ * the same recipe lifted from components/arc/skeleton/skeleton.module.css: the
+ * same fill and the same 1.8s pulse, so a `Skeleton` and a `.skeleton` on one
+ * screen breathe together.
+ *
+ * The keyframes are declared here rather than borrowed, because Arc's live
+ * inside a CSS module where the name is scoped to that module and is not
+ * reachable from this file. It is named `trackit-` prefixed so the two can
+ * never be confused for one.
+ * --------------------------------------------------------------------------- */
+
+@keyframes trackit-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.52;
+  }
+}
+
+/*
+ * Fill and pulse only. The radius is left to each element, so a placeholder can
+ * be a pill, a control, or a panel without this rule overriding its shape; it
+ * is defined after Tailwind's utilities, so anything it did set would win.
+ */
+.skeleton {
+  background: color-mix(in oklab, var(--border-strong) 38%, var(--surface));
+  animation: trackit-skeleton-pulse 1.8s var(--ease-in-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
   }
 }

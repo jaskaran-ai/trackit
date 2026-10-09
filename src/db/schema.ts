@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -8,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const submissionTypeEnum = pgEnum("SubmissionType", ["BUG", "FEATURE"]);
@@ -114,43 +116,65 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const submission = pgTable("submission", {
-  id: text("id").primaryKey(),
-  type: submissionTypeEnum("type").notNull(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  status: submissionStatusEnum("status").notNull().default("OPEN"),
-  priority: priorityEnum("priority").notNull().default("MEDIUM"),
-  project: projectEnum("project").notNull().default("OTHER"),
-  userId: text("userId")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  // SLA / aging — optional target date and the moment it was resolved
-  dueDate: timestamp("dueDate", { mode: "date" }),
-  resolvedAt: timestamp("resolvedAt", { mode: "date" }),
-  // Soft delete — admins archive instead of hard-deleting
-  deletedAt: timestamp("deletedAt", { mode: "date" }),
-  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
-});
+export const submission = pgTable(
+  "submission",
+  {
+    id: text("id").primaryKey(),
+    type: submissionTypeEnum("type").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    status: submissionStatusEnum("status").notNull().default("OPEN"),
+    priority: priorityEnum("priority").notNull().default("MEDIUM"),
+    project: projectEnum("project").notNull().default("OTHER"),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // SLA / aging — optional target date and the moment it was resolved
+    dueDate: timestamp("dueDate", { mode: "date" }),
+    resolvedAt: timestamp("resolvedAt", { mode: "date" }),
+    // Soft delete — admins archive instead of hard-deleting
+    deletedAt: timestamp("deletedAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("submission_userId_deletedAt_createdAt_idx").on(
+      table.userId,
+      table.deletedAt,
+      table.createdAt,
+    ),
+    index("submission_deletedAt_createdAt_idx").on(
+      table.deletedAt,
+      table.createdAt,
+    ),
+    index("submission_status_idx").on(table.status),
+    index("submission_type_idx").on(table.type),
+    index("submission_resolvedAt_idx").on(table.resolvedAt),
+  ],
+);
 
-export const attachment = pgTable("attachment", {
-  id: text("id").primaryKey(),
-  submissionId: text("submissionId")
-    .notNull()
-    .references(() => submission.id, { onDelete: "cascade" }),
-  fileName: text("fileName").notNull(),
-  fileUrl: text("fileUrl").notNull(),
-  fileSize: integer("fileSize").notNull(),
-  mimeType: text("mimeType").notNull(),
-  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
-});
+export const attachment = pgTable(
+  "attachment",
+  {
+    id: text("id").primaryKey(),
+    submissionId: text("submissionId")
+      .notNull()
+      .references(() => submission.id, { onDelete: "cascade" }),
+    fileName: text("fileName").notNull(),
+    fileUrl: text("fileUrl").notNull(),
+    fileSize: integer("fileSize").notNull(),
+    mimeType: text("mimeType").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index("attachment_submissionId_idx").on(table.submissionId)],
+);
 
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
   accounts: many(account),
   submissions: many(submission),
   comments: many(submissionComment),
+  commentReactions: many(commentReaction),
   votes: many(submissionVote),
   savedViews: many(savedView),
   notifications: many(notification),
@@ -195,8 +219,8 @@ export const attachmentRelations = relations(attachment, ({ one }) => ({
 // ---------------------------------------------------------------------------
 
 /**
- * Replies / discussion on a submission. Anyone who can see the submission can
- * comment; only the author or an admin can delete a comment.
+ * Replies / discussion on a submission. Nested via parentId (up to three reply
+ * levels under a root). Soft-deleted rows keep place when children remain.
  */
 export const submissionComment = pgTable(
   "submissionComment",
@@ -209,13 +233,50 @@ export const submissionComment = pgTable(
     userId: text("userId")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    /** Null = root comment. Self-FK is declared below. */
+    parentId: text("parentId"),
+    deletedAt: timestamp("deletedAt", { mode: "date" }),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" })
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("submissionComment_submissionId_idx").on(table.submissionId)],
+  (table) => [
+    index("submissionComment_submissionId_idx").on(table.submissionId),
+    index("submissionComment_parentId_idx").on(table.parentId),
+    foreignKey({
+      columns: [table.parentId],
+      foreignColumns: [table.id],
+      name: "submissionComment_parentId_fk",
+    }).onDelete("cascade"),
+  ],
+);
+
+/**
+ * Emoji reactions on a comment. One row per (comment, user, emoji).
+ */
+export const commentReaction = pgTable(
+  "commentReaction",
+  {
+    id: text("id").primaryKey(),
+    commentId: text("commentId")
+      .notNull()
+      .references(() => submissionComment.id, { onDelete: "cascade" }),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    emoji: text("emoji").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("commentReaction_commentId_idx").on(table.commentId),
+    uniqueIndex("commentReaction_unique").on(
+      table.commentId,
+      table.userId,
+      table.emoji,
+    ),
+  ],
 );
 
 /**
@@ -315,7 +376,7 @@ export const userPreference = pgTable("userPreference", {
 
 export const submissionCommentRelations = relations(
   submissionComment,
-  ({ one }) => ({
+  ({ one, many }) => ({
     submission: one(submission, {
       fields: [submissionComment.submissionId],
       references: [submission.id],
@@ -324,8 +385,26 @@ export const submissionCommentRelations = relations(
       fields: [submissionComment.userId],
       references: [user.id],
     }),
+    parent: one(submissionComment, {
+      fields: [submissionComment.parentId],
+      references: [submissionComment.id],
+      relationName: "comment_replies",
+    }),
+    replies: many(submissionComment, { relationName: "comment_replies" }),
+    reactions: many(commentReaction),
   }),
 );
+
+export const commentReactionRelations = relations(commentReaction, ({ one }) => ({
+  comment: one(submissionComment, {
+    fields: [commentReaction.commentId],
+    references: [submissionComment.id],
+  }),
+  user: one(user, {
+    fields: [commentReaction.userId],
+    references: [user.id],
+  }),
+}));
 
 export const submissionVoteRelations = relations(submissionVote, ({ one }) => ({
   submission: one(submission, {

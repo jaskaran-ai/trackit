@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
-import { Toaster } from "react-hot-toast";
+import { Geist, Inter } from "next/font/google";
+import {
+  ToastStack,
+  ToastStackProvider,
+} from "@/components/arc/toast-stack/toast-stack";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import QueryProvider from "@/components/QueryProvider";
+import "@/components/arc/foundation.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,13 +15,33 @@ export const metadata: Metadata = {
 };
 
 /**
- * Picks the theme and accent before React hydrates so the first paint is
- * already right. Kept in sync with ThemeProvider's storage keys; the class
- * mirrors the `dark` the server renders, hence suppressHydrationWarning on
- * <html>. The accent attribute must match the ids in src/lib/accents.ts.
+ * Arc reads `--font-geist` and `--font-inter` (see components/arc/foundation.css),
+ * so the variable names have to match exactly or the stack falls back to system sans.
  */
-const themeScript = `(function(){try{var r=document.documentElement;var t=localStorage.getItem("trackit-theme");r.classList.remove("light","dark");if(t==="light"||t==="dark"){r.classList.add(t);return;}r.classList.add(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");}catch(e){document.documentElement.classList.add("dark");}
-try{var a=localStorage.getItem("trackit-accent");if(a&&["indigo","violet","blue","green","amber","orange","coral","rose","neutral"].indexOf(a)>-1){document.documentElement.setAttribute("data-accent",a);}else{document.documentElement.setAttribute("data-accent","indigo");}}catch(e){document.documentElement.setAttribute("data-accent","indigo");}})()`;
+const geist = Geist({
+  variable: "--font-geist",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+/**
+ * Picks the theme and accent before React hydrates so the first paint is
+ * already right. Kept in sync with ThemeProvider's storage keys.
+ *
+ * Two attributes are written for every theme: `data-theme` is what Arc's tokens
+ * key off, and the `light` / `dark` class is what the Tailwind `light:` variant
+ * and the zinc ramp in globals.css read. They must never disagree.
+ */
+const themeScript = `(function(){var r=document.documentElement;var t=null;try{t=localStorage.getItem("trackit-theme");}catch(e){}
+if(t!=="light"&&t!=="dark"){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";}
+r.classList.remove("light","dark");r.classList.add(t);r.setAttribute("data-theme",t);
+try{var a=localStorage.getItem("trackit-accent");if(a&&["neutral","violet","blue","green","amber","orange","coral","rose"].indexOf(a)>-1){r.setAttribute("data-accent",a);}else{r.setAttribute("data-accent","neutral");}}catch(e){r.setAttribute("data-accent","neutral");}})()`;
 
 export default function RootLayout({
   children,
@@ -24,32 +49,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark" data-accent="indigo" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`dark ${geist.variable} ${inter.variable}`}
+      data-theme="dark"
+      data-accent="neutral"
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
-          rel="stylesheet"
-        />
       </head>
-      <body className="font-body bg-zinc-950 text-zinc-100 antialiased min-h-screen">
+      <body className="font-body bg-background text-foreground antialiased min-h-screen">
         <QueryProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            {/*
+              The provider owns the queue and the viewport renders it. Both sit
+              above every route, so a result raised on one page survives the
+              navigation that follows it.
+            */}
+            <ToastStackProvider>
+              {children}
+              <ToastStack position="bottom-right" label="Notifications" />
+            </ToastStackProvider>
+          </ThemeProvider>
         </QueryProvider>
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            style: {
-              background: "var(--color-zinc-900)",
-              color: "var(--color-zinc-100)",
-              border: "1px solid var(--color-zinc-800)",
-              fontFamily: "var(--font-body)",
-              fontSize: "0.875rem",
-            },
-          }}
-        />
       </body>
     </html>
   );

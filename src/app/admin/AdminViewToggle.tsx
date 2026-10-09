@@ -3,8 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Archive, LayoutGrid, Table2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 
+/**
+ * Two views of the same records, so this is a segmented control rather than
+ * tabs: nothing below the control changes shape, only how the rows are laid out.
+ */
 export default function AdminViewToggle({
   tableView,
   kanbanView,
@@ -12,48 +16,43 @@ export default function AdminViewToggle({
   tableView: React.ReactNode;
   kanbanView: React.ReactNode;
 }) {
-  const [view, setView] = useState<"table" | "kanban">("table");
+  const [view, setView] = useState("table");
 
   return (
     <div>
-      {/* Toggle */}
-      <div className="flex items-center justify-end mb-4">
-        <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
-          <button
-            onClick={() => setView("table")}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-500 transition-all cursor-pointer",
-              view === "table"
-                ? "bg-zinc-700 text-zinc-200"
-                : "text-zinc-500 hover:text-zinc-300"
-            )}
-          >
-            <Table2 size={13} />
-            Table
-          </button>
-          <button
-            onClick={() => setView("kanban")}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-500 transition-all cursor-pointer",
-              view === "kanban"
-                ? "bg-zinc-700 text-zinc-200"
-                : "text-zinc-500 hover:text-zinc-300"
-            )}
-          >
-            <LayoutGrid size={13} />
-            Kanban
-          </button>
-          <Link
-            href="/admin/archived"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-500 text-zinc-500 hover:text-zinc-300 transition-all cursor-pointer"
-          >
-            <Archive size={13} />
-            Archived
-          </Link>
-        </div>
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+        <Link
+          href="/admin/archived"
+          className="inline-flex items-center gap-1.5 rounded-control px-2.5 py-1.5 text-sm text-secondary transition-colors hover:bg-surface-muted hover:text-foreground"
+        >
+          <Archive size={13} aria-hidden />
+          Archived
+        </Link>
+
+        <SegmentedControl
+          label="View"
+          value={view}
+          onValueChange={setView}
+          options={[
+            {
+              value: "table",
+              label: "Table",
+              accessory: <Table2 size={13} aria-hidden className="ml-1.5 inline" />,
+            },
+            {
+              value: "kanban",
+              label: "Board",
+              accessory: <LayoutGrid size={13} aria-hidden className="ml-1.5 inline" />,
+            },
+          ]}
+        />
       </div>
 
-      {view === "table" ? tableView : kanbanView}
+      {/* Both views stay mounted so a filter or sort applied in one survives the
+          switch. The hidden one is removed from the tab order and the
+          accessibility tree rather than being unmounted. */}
+      <div hidden={view !== "table"}>{tableView}</div>
+      <div hidden={view !== "kanban"}>{kanbanView}</div>
     </div>
   );
 }

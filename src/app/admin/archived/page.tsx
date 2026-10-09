@@ -20,26 +20,26 @@ export default async function ArchivedPage() {
   });
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-5xl mx-auto px-3 sm:px-5 py-6">
         <Link
           href="/admin"
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-6"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors mb-5"
         >
           <ChevronLeft size={15} />
           Back to admin
         </Link>
 
-        <div className="mb-6 animate-fade-up">
-          <h1 className="font-display text-2xl font-700 text-white mb-1">Archived</h1>
-          <p className="text-zinc-500 text-sm">
+        <div className="mb-5">
+          <h1 className="font-display text-2xl font-500 text-foreground mb-1">Archived</h1>
+          <p className="text-muted text-sm">
             Soft-deleted submissions. Restore them or delete for good.
           </p>
         </div>
 
-        <div className="animate-fade-up animate-fade-up-delay-1">
+        <div className="">
           <ArchivedList submissions={submissions as SubmissionWithUser[]} />
         </div>
       </main>
