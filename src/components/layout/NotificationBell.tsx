@@ -12,6 +12,7 @@ import {
 } from "@/components/arc/popover/popover";
 import { ScrollArea } from "@/components/arc/scroll-area/scroll-area";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
+import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Button } from "@/components/arc/button/button";
 import {
   NotificationRow,
@@ -21,6 +22,7 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
+  useUnreadCount,
 } from "@/hooks/use-notifications";
 
 const PREVIEW_LIMIT = 10;
@@ -28,33 +30,38 @@ const PREVIEW_LIMIT = 10;
 export default function NotificationBell() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
+  const signedIn = Boolean(session?.user);
 
   const { toast } = useToastStack();
   const [open, setOpen] = useState(false);
 
-  const notifications = useNotifications(Boolean(session?.user));
+  // Badge polls a cheap unread count; full rows load only when the panel opens.
+  const unreadQuery = useUnreadCount({ enabled: signedIn });
+  const notifications = useNotifications(signedIn && open);
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
 
   const items = notifications.data?.notifications ?? [];
-  const unread = notifications.data?.unread ?? 0;
+  const unread =
+    unreadQuery.data ??
+    notifications.data?.unread ??
+    0;
 
-  // Fresh rows whenever the panel opens.
   useEffect(() => {
-    if (open) void notifications.refetch();
-  }, [open, notifications.refetch]);
+    if (open && notifications.isStale) void notifications.refetch();
+  }, [open, notifications]);
 
   const handleMarkRead = (item: NotificationWithSubmission) => {
-    setOpen(false);
-    if (item.read || !item.submissionId) return;
-    // The cache flips before the POST resolves; a failure reverts it.
-    void markRead.mutate(item.id);
+    markRead.mutate(item.id, {
+      onError: () =>
+        toast({ type: "error", title: "Could not update notification" }),
+    });
   };
 
   const handleMarkAllRead = () => {
     markAll.mutate(undefined, {
-      // The badge empties and the rows restyle, which is the confirmation.
-      onError: () => toast({ type: "error", title: "Could not update notifications" }),
+      onError: () =>
+        toast({ type: "error", title: "Could not update notifications" }),
     });
   };
 
@@ -77,60 +84,72 @@ export default function NotificationBell() {
         )}
       </PopoverTrigger>
 
-      <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] p-0">
-        <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-2.5 py-2">
-          <p className="font-500 text-foreground">Notifications</p>
-          {unread > 0 && (
-            <span className="text-xs text-muted">
-              {unread} new
-            </span>
-          )}
+      <PopoverContent align="end" className="w-[22rem] p-0 sm:w-96">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <p className="font-500 text-foreground">Notifications</p>
+            {unread > 0 && (
+              <span className="text-xs text-muted">{unread} new</span>
+            )}
+          </div>
+          <Link
+            href="/notifications"
+            className="text-xs text-secondary hover:text-foreground"
+            onClick={() => setOpen(false)}
+          >
+            View all
+          </Link>
         </div>
 
-        {items.length === 0 ? (
-          <EmptyState
-            className="px-5 py-8"
-            icon={<Bell size={16} aria-hidden />}
-            title="You're all caught up"
-            description="Nothing has happened on your submissions yet."
-          />
-        ) : (
-          <ScrollArea label="Recent notifications" maxHeight={320}>
-            <ul className="divide-y divide-[var(--border-subtle)]">
-              {items.slice(0, PREVIEW_LIMIT).map((item) => (
-                <li key={item.id}>
-                  <NotificationRow
-                    item={item}
-                    href={
-                      item.submissionId ? submissionHref(item.submissionId) : undefined
-                    }
-                    onSelect={() => handleMarkRead(item)}
-                  />
-                </li>
-              ))}
-            </ul>
-          </ScrollArea>
-        )}
+        <ScrollArea className="max-h-80">
+          <div className="px-3 py-2">
+            <Skeleton
+              loading={notifications.isPending && items.length === 0}
+              lines={3}
+              label="Loading notifications"
+            >
+              {items.length === 0 ? (
+                <EmptyState
+                  className="py-8"
+                  title="You're caught up"
+                  description="Updates on your submissions will show up here."
+                />
+              ) : (
+                <ul className="-mx-3 divide-y divide-[var(--border-subtle)]">
+                  {items.slice(0, PREVIEW_LIMIT).map((item) => (
+                    <li key={item.id}>
+                      <NotificationRow
+                        item={item}
+                        href={
+                          item.submissionId
+                            ? submissionHref(item.submissionId)
+                            : undefined
+                        }
+                        onSelect={() => {
+                          if (!item.read) handleMarkRead(item);
+                          setOpen(false);
+                        }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Skeleton>
+          </div>
+        </ScrollArea>
 
-        <div className="flex items-center gap-1 border-t border-[var(--border-subtle)] p-1.5">
+        <div className="border-t border-border p-2">
           <Button
+            type="button"
             variant="ghost"
             size="sm"
-            className="flex-1"
+            className="w-full justify-center gap-1.5"
             onClick={handleMarkAllRead}
             disabled={markAll.isPending || unread === 0}
           >
             <CheckCheck size={13} aria-hidden />
             {markAll.isPending ? "Updating" : "Mark all read"}
           </Button>
-
-          <Link
-            href="/notifications"
-            onClick={() => setOpen(false)}
-            className="flex flex-1 items-center justify-center rounded-control py-2 text-sm text-secondary transition-colors hover:bg-surface-muted hover:text-foreground"
-          >
-            View all
-          </Link>
         </div>
       </PopoverContent>
     </Popover>

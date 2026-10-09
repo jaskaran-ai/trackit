@@ -26,6 +26,7 @@ export default async function NotificationsPage() {
    */
   const queryClient = getQueryClient();
   queryClient.setQueryData(queryKeys.notifications.list, { notifications, unread });
+  queryClient.setQueryData(queryKeys.notifications.unread, unread);
   const state = dehydrate(queryClient);
 
   return (
