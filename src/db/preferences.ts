@@ -1,14 +1,21 @@
 import { eq } from "drizzle-orm";
 import { db } from "./index";
 import { userPreference } from "./schema";
+import {
+  DEFAULT_ACCENT,
+  normaliseAccent,
+  type AccentId,
+} from "@/lib/accents";
 
 export type UserPreferences = {
   theme: "dark" | "light" | "system";
+  accent: AccentId;
   inAppNotifications: boolean;
 };
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: "dark",
+  accent: DEFAULT_ACCENT,
   inAppNotifications: true,
 };
 
@@ -21,6 +28,7 @@ export async function getPreferences(userId: string): Promise<UserPreferences> {
 
   return {
     theme: (row.theme as UserPreferences["theme"]) ?? "dark",
+    accent: normaliseAccent(row.accent),
     inAppNotifications: row.inAppNotifications ?? true,
   };
 }
@@ -38,6 +46,7 @@ export async function updatePreferences(
     .values({
       userId,
       theme: patch.theme ?? DEFAULT_PREFERENCES.theme,
+      accent: patch.accent ? normaliseAccent(patch.accent) : DEFAULT_ACCENT,
       inAppNotifications:
         patch.inAppNotifications ?? DEFAULT_PREFERENCES.inAppNotifications,
     })
@@ -45,6 +54,7 @@ export async function updatePreferences(
       target: userPreference.userId,
       set: {
         ...(patch.theme ? { theme: patch.theme } : {}),
+        ...(patch.accent ? { accent: normaliseAccent(patch.accent) } : {}),
         ...(patch.inAppNotifications !== undefined
           ? { inAppNotifications: patch.inAppNotifications }
           : {}),
@@ -57,6 +67,7 @@ export async function updatePreferences(
 
   return {
     theme: (row.theme as UserPreferences["theme"]) ?? "dark",
+    accent: normaliseAccent(row.accent),
     inAppNotifications: row.inAppNotifications ?? true,
   };
 }

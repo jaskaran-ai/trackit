@@ -1,30 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Bell } from "lucide-react";
+import { Check, Bell, Palette } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { useTheme, type ThemePreference } from "@/components/theme/ThemeProvider";
 import { ThemeSegmentedControl } from "@/components/theme/ThemeToggle";
+import { ACCENT_IDS, ACCENT_LABELS } from "@/lib/accents";
+import type { AccentId } from "@/lib/accents";
 
 export type Preferences = {
   theme: ThemePreference;
+  accent: AccentId;
   inAppNotifications: boolean;
 };
 
 export default function PreferencesForm({ initial }: { initial: Preferences }) {
-  const { setTheme } = useTheme();
+  const { setTheme, setAccent } = useTheme();
 
   const [theme, setThemeValue] = useState<ThemePreference>(initial.theme);
+  const [accent, setAccentValue] = useState<AccentId>(initial.accent);
   const [inAppNotifications, setInAppNotifications] = useState(
     initial.inAppNotifications,
   );
   const [saving, setSaving] = useState(false);
 
-  const dirty = theme !== initial.theme || inAppNotifications !== initial.inAppNotifications;
+  const dirty =
+    theme !== initial.theme ||
+    accent !== initial.accent ||
+    inAppNotifications !== initial.inAppNotifications;
 
   const revert = () => {
     setThemeValue(initial.theme);
+    setAccentValue(initial.accent);
     setInAppNotifications(initial.inAppNotifications);
   };
 
@@ -34,12 +42,13 @@ export default function PreferencesForm({ initial }: { initial: Preferences }) {
       const res = await fetch("/api/user/preferences", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ theme, inAppNotifications }),
+        body: JSON.stringify({ theme, accent, inAppNotifications }),
       });
       if (!res.ok) throw new Error("Failed to save");
 
-      // The provider owns the <html> class, so let it do the switch.
+      // The provider owns the <html> class and data-accent, so let it switch.
       if (theme !== initial.theme) setTheme(theme);
+      if (accent !== initial.accent) setAccent(accent);
 
       toast.success("Preferences saved");
     } catch {
@@ -64,6 +73,65 @@ export default function PreferencesForm({ initial }: { initial: Preferences }) {
           showLabels
           className="w-full sm:w-auto sm:inline-flex"
         />
+      </div>
+
+      <div className="h-px bg-zinc-800" />
+
+      {/* Accent */}
+      <div>
+        <h2 className="font-display text-sm font-600 text-zinc-200 mb-1 flex items-center gap-1.5">
+          <Palette size={13} className="text-zinc-500" />
+          Accent colour
+        </h2>
+        <p className="text-xs text-zinc-500 mb-3">
+          Marks the active item, selected options, and your primary actions.
+          Status badges keep their own colours.
+        </p>
+
+        <div
+          role="radiogroup"
+          aria-label="Accent colour"
+          className="flex flex-wrap items-center gap-2"
+        >
+          {ACCENT_IDS.map((id) => {
+            const selected = accent === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                aria-label={ACCENT_LABELS[id]}
+                onClick={() => setAccentValue(id)}
+                /* Scoped so the dot paints with the real remapped ramp for this
+                   hue, rather than a second copy of the palette in JS. */
+                data-accent={id}
+                data-testid={`accent-${id}`}
+                className={cn(
+                  "relative w-8 h-8 rounded-lg border cursor-pointer transition-colors flex items-center justify-center",
+                  selected
+                    ? "border-zinc-300"
+                    : "border-zinc-700 hover:border-zinc-600",
+                )}
+              >
+                <span
+                  className={cn(
+                    "w-4 h-4 rounded-full transition-transform",
+                    "bg-indigo-500",
+                    selected && "scale-110",
+                  )}
+                />
+                {selected && (
+                  <Check
+                    size={11}
+                    className="absolute text-zinc-950 mix-blend-normal"
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="h-px bg-zinc-800" />

@@ -10,11 +10,13 @@ export const metadata: Metadata = {
 };
 
 /**
- * Picks the theme before React hydrates so the first paint is already right.
- * Kept in sync with ThemeProvider's storage key; the class mirrors the `dark`
- * the server renders, hence suppressHydrationWarning on <html>.
+ * Picks the theme and accent before React hydrates so the first paint is
+ * already right. Kept in sync with ThemeProvider's storage keys; the class
+ * mirrors the `dark` the server renders, hence suppressHydrationWarning on
+ * <html>. The accent attribute must match the ids in src/lib/accents.ts.
  */
-const themeScript = `(function(){try{var t=localStorage.getItem("trackit-theme");var r=document.documentElement;r.classList.remove("light","dark");if(t==="light"||t==="dark"){r.classList.add(t);return;}r.classList.add(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");}catch(e){document.documentElement.classList.add("dark");}})()`;
+const themeScript = `(function(){try{var r=document.documentElement;var t=localStorage.getItem("trackit-theme");r.classList.remove("light","dark");if(t==="light"||t==="dark"){r.classList.add(t);return;}r.classList.add(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");}catch(e){document.documentElement.classList.add("dark");}
+try{var a=localStorage.getItem("trackit-accent");if(a&&["indigo","violet","blue","green","amber","orange","coral","rose","neutral"].indexOf(a)>-1){document.documentElement.setAttribute("data-accent",a);}else{document.documentElement.setAttribute("data-accent","indigo");}}catch(e){document.documentElement.setAttribute("data-accent","indigo");}})()`;
 
 export default function RootLayout({
   children,
@@ -22,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" className="dark" data-accent="indigo" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

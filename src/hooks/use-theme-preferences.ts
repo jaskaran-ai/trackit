@@ -5,7 +5,10 @@ import type { UserPreference } from "@/db/types";
 const PREFERENCES_URL = "/api/user/preferences";
 
 /** Wire shape of GET /api/user/preferences. */
-export type ThemePreferences = Pick<UserPreference, "theme" | "inAppNotifications">;
+export type ThemePreferences = Pick<
+  UserPreference,
+  "theme" | "accent" | "inAppNotifications"
+>;
 
 /**
  * Reads the stored preference row once. Signed out and offline responses come
