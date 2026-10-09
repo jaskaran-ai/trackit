@@ -274,7 +274,7 @@ export default function SubmitPage() {
                 value={description}
                 onChange={setDescription}
                 placeholder={descriptionPlaceholder}
-                className="[&_[contenteditable]]:min-h-52"
+                className="min-h-56"
               />
             </div>
             <div className="space-y-3">
