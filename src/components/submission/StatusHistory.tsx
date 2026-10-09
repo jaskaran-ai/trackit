@@ -124,9 +124,7 @@ export default function StatusHistory({ submissionId }: { submissionId: string }
       </h2>
 
       {entries === undefined || now === null ? (
-        <div aria-busy="true">
-          <Skeleton lines={3} />
-        </div>
+        <Skeleton lines={3} label="Loading history" />
       ) : events.length === 0 ? (
         <p className="text-sm text-muted">No changes recorded yet.</p>
       ) : (

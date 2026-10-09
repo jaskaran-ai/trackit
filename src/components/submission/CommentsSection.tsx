@@ -52,9 +52,7 @@ export default function CommentsSection({
           <MessageSquare size={13} aria-hidden />
           Comments
         </h2>
-        <div aria-busy="true">
-          <Skeleton lines={4} />
-        </div>
+        <Skeleton lines={4} label="Loading comments" />
       </section>
     );
   }

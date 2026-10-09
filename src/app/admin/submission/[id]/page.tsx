@@ -1,10 +1,17 @@
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { getSubmissionById } from "@/db/submissions";
+import { listComments } from "@/db/comments";
+import { listHistory } from "@/db/history";
+import { getVoteSummary } from "@/db/votes";
+import { queryKeys, getQueryClient } from "@/lib/query-client";
 import Navbar from "@/components/shared/Navbar";
 import { StatusBadge, TypeBadge, PriorityBadge } from "@/components/shared/Badges";
 import StatusHistory from "@/components/submission/StatusHistory";
+import CommentsSection from "@/components/submission/CommentsSection";
+import VoteButton from "@/components/shared/VoteButton";
 import AdminStatusControls from "./AdminStatusControls";
 import { formatDate, formatBytes } from "@/lib/utils";
 import {
@@ -34,6 +41,19 @@ export default async function AdminSubmissionDetailPage({
 
   if (!submission) notFound();
 
+  const [comments, history, vote] = await Promise.all([
+    listComments(id),
+    listHistory(id),
+    submission.type === "FEATURE"
+      ? getVoteSummary(id, session.user.id)
+      : Promise.resolve(null),
+  ]);
+
+  const queryClient = getQueryClient();
+  queryClient.setQueryData(queryKeys.comments(id), comments);
+  queryClient.setQueryData(queryKeys.history(id), history);
+  const state = dehydrate(queryClient);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -54,7 +74,17 @@ export default async function AdminSubmissionDetailPage({
               <h1 className="font-display text-xl font-500 text-foreground leading-snug flex-1">
                 {submission.title}
               </h1>
-              <StatusBadge status={submission.status} />
+              <div className="flex items-center gap-2 shrink-0">
+                <StatusBadge status={submission.status} />
+                {submission.type === "FEATURE" && (
+                  <VoteButton
+                    submissionId={submission.id}
+                    size="md"
+                    initialCount={vote?.count}
+                    initialHasVoted={vote?.hasVoted}
+                  />
+                )}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-4">
@@ -118,7 +148,14 @@ export default async function AdminSubmissionDetailPage({
             />
           </div>
 
-          <StatusHistory submissionId={submission.id} />
+          <HydrationBoundary state={state}>
+            <StatusHistory submissionId={submission.id} />
+            <CommentsSection
+              submissionId={submission.id}
+              currentUserId={session.user.id}
+              isAdmin
+            />
+          </HydrationBoundary>
 
           {/* Attachments */}
           {submission.attachments.length > 0 && (

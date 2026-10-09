@@ -7,13 +7,10 @@ import { RichTextEditor as ArcRichTextEditor } from "@/components/arc/rich-text-
  *
  * The contract is unchanged (`value` is HTML in, `onChange` reports HTML out),
  * which is what the submission description column stores and what the detail
- * view renders, so no data or query changed with this swap.
- *
- * One capability was given up: underline. Arc's editor blocks Cmd/Ctrl+U and
- * does not emit `<u>`. It covers everything else this form used, bold, italic,
- * inline code, code blocks, headings, and both list kinds, and adds a floating
- * selection toolbar and a slash menu. If underline comes back as a
- * requirement, the editor has to go back to Tiptap rather than be patched.
+ * The Arc editor ships chromeless — a bare contenteditable — so this wrapper
+ * also gives it the field frame every other input on the form has: border,
+ * radius, and the same foreground border on hover and focus-within (Arc
+ * answers focus with border colour, never a ring).
  */
 export default function RichTextEditor({
   value,
@@ -28,7 +25,13 @@ export default function RichTextEditor({
 }) {
   return (
     <ArcRichTextEditor
-      className={className}
+      className={[
+        "rounded-control border border-[var(--border-strong)] bg-surface px-3 py-2.5 transition-colors",
+        "hover:border-foreground focus-within:border-foreground",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-label="Description"
       placeholder={placeholder}
       value={value}
