@@ -4,6 +4,42 @@ A full-stack Next.js 16 app to track bug reports and feature requests. Built wit
 
 ---
 
+## Design system
+
+The interface is built on [Arc](https://uiarc.dev), installed into
+`src/components/arc/` by the shadcn CLI and driven by `components.json`.
+`components/arc/foundation.css` is the single source of colour, type, radius, and
+motion tokens, and is imported once in the root layout.
+
+**Accent colour.** Arc ships eight accents, keyed off `data-accent` on `<html>`:
+`neutral`, `violet`, `blue`, `green`, `amber`, `orange`, `coral`, `rose`. The
+picker in Settings writes that attribute, and the choice is saved per user.
+
+**Theme.** Arc reads `data-theme` on `<html>` for `light` and `dark`. TrackIt
+also keeps the `light` / `dark` class on the same element, because the Tailwind
+`light:` variant and the legacy zinc ramp in `globals.css` read the class. The
+two attributes are written together in `ThemeProvider` and in the inline script
+in `app/layout.tsx`, so they cannot drift apart.
+
+**The indigo bridge.** `globals.css` derives `--color-indigo-300` through
+`--color-indigo-700` from Arc's `--accent` and `--accent-strong`, with an
+`@theme inline` block that exposes the rest of Arc's tokens as Tailwind
+utilities. That is what keeps a `bg-indigo-500` element the exact same colour as
+an Arc button beside it. As components move onto Arc, their indigo utilities go
+with them and the bridge shrinks.
+
+**Adding a component.**
+
+```bash
+npx shadcn@latest add @uiarc/<id>
+```
+
+List the ids at [uiarc.dev/llms.txt](https://uiarc.dev/llms.txt). Pro items
+install from `@uiarc-pro/<id>` and need `ARC_PRO_TOKEN` in the environment. Do
+not edit files under `src/components/arc/`: re-run the installer instead.
+
+---
+
 ## Features
 
 **Submissions.** Report bugs or request features with a title, rich-text description, priority, project, due date, and drag-and-drop attachments. Titles are checked against existing submissions for likely duplicates before you submit.
@@ -30,8 +66,9 @@ A full-stack Next.js 16 app to track bug reports and feature requests. Built wit
 | ORM | Drizzle ORM |
 | Rich text | Tiptap 3 |
 | File uploads | Local disk (`public/uploads`) or UploadThing |
-| Styling | Tailwind CSS v4 + custom design system |
-| Fonts | Syne (display) + DM Sans (body) |
+| UI | [Arc](https://uiarc.dev) component library + Tailwind CSS v4 |
+| Data | oRPC procedures + TanStack Query |
+| Fonts | Geist (display) + Inter (body) |
 
 ---
 
@@ -150,6 +187,12 @@ src/
 
 > **Commands:** `pnpm dev`, `pnpm build`, `pnpm typecheck`, `pnpm db:push`.
 > `pnpm lint` currently fails because `typescript-eslint` does not support the TypeScript 7 this project pins. Use `pnpm typecheck` until that dependency is bumped.
+
+> **Toasts.** `react-hot-toast` is still wired up for background-work feedback.
+> Several call sites treat it as the only confirmation of a foreground action,
+> which is the one thing Arc's rules disallow: the rows that changed should
+> confirm in place instead. Converting those is a behavioural pass over about
+> fourteen files and is not done.
 
 ---
 
