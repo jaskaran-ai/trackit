@@ -3,11 +3,19 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck, MessageSquare, RefreshCw } from "lucide-react";
-import { cn, formatDate } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { cn, formatDate } from "@/lib/utils";
+import { EmptyState } from "@/components/arc/empty-state/empty-state";
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
+import { Button } from "@/components/arc/button/button";
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from "@/hooks/use-notifications";
 import type { Notification } from "@/db/types";
 
-/** Shape returned by GET /api/notifications. */
+/** A notification row joined with enough of its submission to render a title. */
 export type NotificationWithSubmission = Notification & {
   submission: { id: string; title: string; type: string } | null;
 };
@@ -19,8 +27,9 @@ export function notificationIcon(type: string) {
 }
 
 /**
- * One notification row, shared by the bell dropdown and the /notifications
- * page. Rows without a submission have nowhere to go, so they stay static.
+ * One notification row, shared by the bell panel and the /notifications page.
+ * Rows without a submission have nowhere to go, so they stay static rather than
+ * pretending to be links.
  */
 export function NotificationRow({
   item,
@@ -37,182 +46,139 @@ export function NotificationRow({
 
   const body = (
     <>
-      <div
-        className={cn(
-          "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border",
-          unread
-            ? "bg-indigo-500/15 border-indigo-500/30 text-indigo-400"
-            : "bg-zinc-800 border-zinc-700 text-zinc-500",
-        )}
-      >
-        <Icon size={13} />
-      </div>
+      {/* Unread is carried by the row's weight and the dot rather than a
+          coloured tile, so a notification type is never told apart by hue. */}
+      <Icon
+        size={14}
+        aria-hidden
+        className={cn("mt-0.5 shrink-0", unread ? "text-accent" : "text-muted")}
+      />
 
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            "text-sm font-500 truncate",
-            unread ? "text-zinc-100" : "text-zinc-400",
+            "truncate",
+            unread ? "font-500 text-foreground" : "text-secondary",
           )}
         >
           {item.title}
         </p>
         {item.body && (
-          <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2">{item.body}</p>
+          <p className="mt-0.5 line-clamp-2 text-xs text-muted">{item.body}</p>
         )}
-        <p className="text-[11px] text-zinc-600 mt-1">{formatDate(item.createdAt)}</p>
+        <p className="mt-1 text-xs text-muted">{formatDate(item.createdAt)}</p>
       </div>
 
       {unread && (
         <span
           aria-hidden="true"
-          className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5"
+          className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
         />
       )}
     </>
   );
 
-  const shell = "flex items-start gap-3 px-3 py-2.5 text-left transition-colors";
+  const shell = "flex w-full items-start gap-3 px-3 py-3 text-left";
 
   if (!clickable) {
     return <div className={cn(shell, "cursor-default")}>{body}</div>;
   }
 
   return (
-    <Link href={href!} onClick={onSelect} className={cn(shell, "hover:bg-zinc-800/60")}>
+    <Link href={href!} onClick={onSelect} className={cn(shell, "hover:bg-surface-muted")}>
       {body}
     </Link>
   );
 }
 
-/** Full-page list with an unread filter and a mark-all-read action. */
-export default function NotificationList({
-  initialNotifications,
-  isAdmin = false,
-}: {
-  initialNotifications: NotificationWithSubmission[];
-  isAdmin?: boolean;
-}) {
-  const [items, setItems] = useState<NotificationWithSubmission[]>(initialNotifications);
+/**
+ * Full-page inbox. Read state is read from, and written to, the shared
+ * notifications cache rather than a local copy, so this page and the bell badge
+ * can never report different unread counts.
+ */
+export default function NotificationList({ isAdmin = false }: { isAdmin?: boolean }) {
   const [filter, setFilter] = useState<"all" | "unread">("all");
-  const [saving, setSaving] = useState(false);
 
-  const unreadCount = useMemo(
-    () => items.filter((item) => !item.read).length,
-    [items],
-  );
+  const notifications = useNotifications();
+  const markRead = useMarkNotificationRead();
+  const markAll = useMarkAllNotificationsRead();
+
+  const items = notifications.data?.notifications ?? [];
+  const unread = notifications.data?.unread ?? 0;
 
   const visible = useMemo(
     () => (filter === "unread" ? items.filter((item) => !item.read) : items),
     [filter, items],
   );
 
-  const markRead = async (item: NotificationWithSubmission) => {
-    if (item.read || !item.submissionId) return;
-
-    // Optimistic: the click already navigates away.
-    setItems((current) =>
-      current.map((entry) =>
-        entry.id === item.id ? { ...entry, read: true } : entry,
-      ),
-    );
-
-    try {
-      await fetch(`/api/notifications?id=${item.id}`, { method: "POST" });
-    } catch {
-      toast.error("Could not mark that notification as read");
-    }
-  };
-
   const submissionHref = (submissionId: string) =>
     isAdmin ? `/admin/submission/${submissionId}` : `/submission/${submissionId}`;
 
-  const markAllRead = async () => {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/notifications?all=true", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to update");
+  function handleMarkRead(item: NotificationWithSubmission) {
+    if (item.read || !item.submissionId) return;
+    // Optimistic: the cache updates first, and reverts itself if the write fails.
+    markRead.mutate(item.id);
+  }
 
-      setItems((current) => current.map((item) => ({ ...item, read: true })));
-      toast.success("All notifications marked as read");
-    } catch {
-      toast.error("Could not update notifications");
-    } finally {
-      setSaving(false);
-    }
-  };
+  function handleMarkAllRead() {
+    // The rows themselves flip, which is the confirmation. A toast on top of
+    // that would only repeat it, so only the failure needs saying.
+    markAll.mutate(undefined, {
+      onError: () => toast.error("Could not update notifications"),
+    });
+  }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b border-zinc-800">
-        <div
-          className="flex items-center gap-0.5 p-0.5 rounded-lg bg-zinc-800"
-          role="group"
-          aria-label="Filter notifications"
-        >
-          {(["all", "unread"] as const).map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={filter === option}
-              onClick={() => setFilter(option)}
-              className={cn(
-                "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-500 transition-colors cursor-pointer",
-                filter === option
-                  ? "bg-zinc-900 text-zinc-100"
-                  : "text-zinc-500 hover:text-zinc-300",
-              )}
-            >
-              {option === "all" ? "All" : "Unread"}
-              {option === "unread" && unreadCount > 0 && (
-                <span className="text-[10px] text-zinc-500">{unreadCount}</span>
-              )}
-            </button>
-          ))}
-        </div>
+    <div className="overflow-hidden rounded-panel border border-border bg-surface">
+      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2.5">
+        <SegmentedControl
+          label="Filter notifications"
+          value={filter}
+          onValueChange={(next) => setFilter(next as "all" | "unread")}
+          options={[
+            { value: "all", label: "All" },
+            {
+              value: "unread",
+              label: "Unread",
+              accessory: unread > 0 ? (
+                <span className="ml-1 text-xs text-muted">{unread}</span>
+              ) : null,
+            },
+          ]}
+        />
 
-        <button
-          type="button"
-          onClick={markAllRead}
-          disabled={saving || unreadCount === 0}
-          className={cn(
-            "flex items-center gap-1.5 h-8 px-2.5 ml-auto rounded-lg border border-zinc-700 text-xs font-500 transition-colors",
-            saving || unreadCount === 0
-              ? "text-zinc-600 cursor-not-allowed"
-              : "text-zinc-300 hover:text-zinc-100 hover:border-zinc-600 cursor-pointer",
-          )}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="ml-auto"
+          onClick={handleMarkAllRead}
+          loading={markAll.isPending}
+          disabled={unread === 0}
         >
-          <CheckCheck size={13} />
-          {saving ? "Updating…" : "Mark all read"}
-        </button>
+          <CheckCheck size={13} aria-hidden />
+          Mark all read
+        </Button>
       </div>
 
-      {/* Rows */}
       {visible.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-          <div className="w-12 h-12 bg-zinc-800 border border-zinc-700 rounded-2xl flex items-center justify-center mb-4">
-            <Bell size={18} className="text-zinc-500" />
-          </div>
-          <h3 className="font-display text-base font-600 text-zinc-200 mb-1">
-            You&apos;re all caught up
-          </h3>
-          <p className="text-sm text-zinc-500 max-w-xs">
-            {filter === "unread"
+        <EmptyState
+          className="py-16"
+          icon={<Bell size={18} aria-hidden />}
+          title="You're all caught up"
+          description={
+            filter === "unread"
               ? "No unread notifications right now."
-              : "Nothing has happened on your submissions yet."}
-          </p>
-        </div>
+              : "Nothing has happened on your submissions yet."
+          }
+        />
       ) : (
-        <ul className="divide-y divide-zinc-800">
+        <ul className="divide-y divide-[var(--border-subtle)]">
           {visible.map((item) => (
             <li key={item.id}>
               <NotificationRow
                 item={item}
-                href={
-                  item.submissionId ? submissionHref(item.submissionId) : undefined
-                }
-                onSelect={() => void markRead(item)}
+                href={item.submissionId ? submissionHref(item.submissionId) : undefined}
+                onSelect={() => handleMarkRead(item)}
               />
             </li>
           ))}

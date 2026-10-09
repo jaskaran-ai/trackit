@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/arc/popover/popover";
+import { ScrollArea } from "@/components/arc/scroll-area/scroll-area";
+import { EmptyState } from "@/components/arc/empty-state/empty-state";
+import { Button } from "@/components/arc/button/button";
 import {
   NotificationRow,
   type NotificationWithSubmission,
@@ -16,12 +23,13 @@ import {
   useNotifications,
 } from "@/hooks/use-notifications";
 
+const PREVIEW_LIMIT = 10;
+
 export default function NotificationBell() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
 
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const notifications = useNotifications(Boolean(session?.user));
   const markRead = useMarkNotificationRead();
@@ -35,31 +43,9 @@ export default function NotificationBell() {
     if (open) void notifications.refetch();
   }, [open, notifications.refetch]);
 
-  // Outside click and Escape close the panel.
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
-
   const handleMarkRead = (item: NotificationWithSubmission) => {
     setOpen(false);
-
     if (item.read || !item.submissionId) return;
-
     // The cache flips before the POST resolves; a failure reverts it.
     void markRead.mutate(item.id);
   };
@@ -77,48 +63,40 @@ export default function NotificationBell() {
     isAdmin ? `/admin/submission/${submissionId}` : `/submission/${submissionId}`;
 
   return (
-    <div className="relative" ref={containerRef}>
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
-        className="relative flex items-center justify-center w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors cursor-pointer"
+        className="relative flex h-9 w-9 items-center justify-center rounded-control text-secondary transition-colors hover:bg-surface-muted hover:text-foreground"
       >
-        <Bell size={16} />
+        <Bell size={16} aria-hidden />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-indigo-500 text-white text-[10px] font-600 flex items-center justify-center">
+          <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-pill bg-accent px-1 text-xs font-500 tabular-nums text-accent-foreground">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
-      </button>
+      </PopoverTrigger>
 
-      {open && (
-        <div className="absolute right-0 mt-1 w-72 sm:w-80 max-w-[calc(100vw-2rem)] bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-800">
-            <p className="text-sm font-600 text-zinc-200">Notifications</p>
-            {unread > 0 && (
-              <span className="text-[10px] font-500 text-indigo-400 bg-indigo-500/15 border border-indigo-500/30 px-1.5 py-0.5 rounded">
-                {unread} new
-              </span>
-            )}
-          </div>
+      <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] p-0">
+        <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2.5">
+          <p className="font-500 text-foreground">Notifications</p>
+          {unread > 0 && (
+            <span className="text-xs text-muted">
+              {unread} new
+            </span>
+          )}
+        </div>
 
-          {/* Rows */}
-          {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-              <div className="w-10 h-10 bg-zinc-800 border border-zinc-700 rounded-2xl flex items-center justify-center mb-3">
-                <Bell size={16} className="text-zinc-500" />
-              </div>
-              <p className="text-sm font-500 text-zinc-300">You&apos;re all caught up</p>
-              <p className="text-xs text-zinc-600 mt-1">
-                Nothing has happened on your submissions yet.
-              </p>
-            </div>
-          ) : (
-            <ul className="max-h-80 overflow-y-auto divide-y divide-zinc-800">
-              {items.slice(0, 10).map((item) => (
+        {items.length === 0 ? (
+          <EmptyState
+            className="px-6 py-10"
+            icon={<Bell size={16} aria-hidden />}
+            title="You're all caught up"
+            description="Nothing has happened on your submissions yet."
+          />
+        ) : (
+          <ScrollArea label="Recent notifications" maxHeight={320}>
+            <ul className="divide-y divide-[var(--border-subtle)]">
+              {items.slice(0, PREVIEW_LIMIT).map((item) => (
                 <li key={item.id}>
                   <NotificationRow
                     item={item}
@@ -130,37 +108,30 @@ export default function NotificationBell() {
                 </li>
               ))}
             </ul>
-          )}
+          </ScrollArea>
+        )}
 
-          {/* Footer */}
-          <div className="flex items-center border-t border-zinc-800">
-            <button
-              type="button"
-              onClick={handleMarkAllRead}
-              disabled={markAll.isPending || unread === 0}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 h-10 text-xs font-500 transition-colors",
-                markAll.isPending || unread === 0
-                  ? "text-zinc-600 cursor-not-allowed"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 cursor-pointer",
-              )}
-            >
-              <CheckCheck size={13} />
-              {markAll.isPending ? "Updating…" : "Mark all read"}
-            </button>
+        <div className="flex items-center gap-1 border-t border-[var(--border-subtle)] p-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex-1"
+            onClick={handleMarkAllRead}
+            disabled={markAll.isPending || unread === 0}
+          >
+            <CheckCheck size={13} aria-hidden />
+            {markAll.isPending ? "Updating" : "Mark all read"}
+          </Button>
 
-            <div className="w-px h-6 bg-zinc-800" />
-
-            <Link
-              href="/notifications"
-              onClick={() => setOpen(false)}
-              className="flex-1 flex items-center justify-center h-10 text-xs font-500 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-colors"
-            >
-              View all
-            </Link>
-          </div>
+          <Link
+            href="/notifications"
+            onClick={() => setOpen(false)}
+            className="flex flex-1 items-center justify-center rounded-control py-2 text-sm text-secondary transition-colors hover:bg-surface-muted hover:text-foreground"
+          >
+            View all
+          </Link>
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
