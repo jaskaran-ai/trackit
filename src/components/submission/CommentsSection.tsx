@@ -1,7 +1,7 @@
 "use client";
 
 import { MessageSquare } from "lucide-react";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import {
   CommentThread,
   type CommentAuthor,
@@ -38,6 +38,7 @@ export default function CommentsSection({
   currentUserId?: string;
   isAdmin?: boolean;
 }) {
+  const { toast } = useToastStack();
   const commentsQuery = useComments(submissionId);
   const postComment = useCreateComment(submissionId);
   const removeComment = useDeleteComment(submissionId);
@@ -94,28 +95,41 @@ export default function CommentsSection({
   function handleChange(next: ThreadComment[], event: Parameters<NonNullable<React.ComponentProps<typeof CommentThread>["onCommentsChange"]>>[1]) {
     if (event.type === "reply") {
       postComment.mutate(event.comment.body, {
-        onError: (error) => toast.error(error.message ?? "Could not post the comment"),
+        onError: (error) =>
+          toast({
+            type: "error",
+            title: error.message ?? "Could not post the comment",
+          }),
       });
       return;
     }
 
     if (event.type === "delete") {
       removeComment.mutate(event.id, {
-        onSuccess: () => toast.success("Comment deleted"),
-        onError: (error) => toast.error(error.message ?? "Could not delete the comment"),
+        // The comment leaves the thread on its own.
+        onError: (error) =>
+          toast({
+            type: "error",
+            title: error.message ?? "Could not delete the comment",
+          }),
       });
       return;
     }
 
     if (event.type === "edit") {
       /* Editing is not supported by the API. The thread still offers it, so the
-         change is refused here rather than silently lost in the cache. */
-      toast.error("Comments cannot be edited once posted");
+         refusal is reported rather than the edit being silently lost in the
+         cache. It is a response to something the person just tried, not a
+         result of work they are waiting on, so it stays brief. */
+      toast({
+        type: "info",
+        title: "Comments cannot be edited once posted",
+      });
     }
   }
 
   return (
-    <section className="rounded-panel border border-border bg-surface p-6">
+    <section className="rounded-panel border border-border bg-surface p-5">
       <CommentThread
         title={
           <span className="flex items-center gap-2">

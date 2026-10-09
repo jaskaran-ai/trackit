@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check } from "lucide-react";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import { cn } from "@/lib/utils";
 import { useTheme, type ThemePreference } from "@/components/theme/ThemeProvider";
 import { ThemeSegmentedControl } from "@/components/theme/ThemeToggle";
@@ -31,12 +31,13 @@ function SectionHeading({
     <div>
       <h3 className="font-500 text-foreground">{title}</h3>
       {description && <p className="mt-1 text-sm text-muted">{description}</p>}
-      {children && <div className="mt-3">{children}</div>}
+      {children && <div className="mt-2.5">{children}</div>}
     </div>
   );
 }
 
 export default function PreferencesForm({ initial }: { initial: Preferences }) {
+  const { toast } = useToastStack();
   const { setTheme, setAccent } = useTheme();
 
   const [theme, setThemeValue] = useState<ThemePreference>(initial.theme);
@@ -71,17 +72,19 @@ export default function PreferencesForm({ initial }: { initial: Preferences }) {
       if (theme !== initial.theme) setTheme(theme);
       if (accent !== initial.accent) setAccent(accent);
 
-      toast.success("Preferences saved");
+      /* The theme and accent are visibly applied by the provider before this,
+         but "saved" is about persistence, which nothing on screen shows. */
+      toast({ type: "success", title: "Preferences saved" });
     } catch {
       revert();
-      toast.error("Could not save preferences");
+      toast({ type: "error", title: "Could not save your preferences" });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-6 rounded-panel border border-border bg-surface p-5 sm:p-6">
+    <div className="space-y-4 rounded-panel border border-border bg-surface p-4 sm:p-5">
       <SectionHeading
         title="Appearance"
         description="System follows the light or dark setting on your device."

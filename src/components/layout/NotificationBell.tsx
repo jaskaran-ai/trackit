@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import {
   Popover,
   PopoverContent,
@@ -29,6 +29,7 @@ export default function NotificationBell() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
 
+  const { toast } = useToastStack();
   const [open, setOpen] = useState(false);
 
   const notifications = useNotifications(Boolean(session?.user));
@@ -52,8 +53,8 @@ export default function NotificationBell() {
 
   const handleMarkAllRead = () => {
     markAll.mutate(undefined, {
-      onSuccess: () => toast.success("All notifications marked as read"),
-      onError: () => toast.error("Could not update notifications"),
+      // The badge empties and the rows restyle, which is the confirmation.
+      onError: () => toast({ type: "error", title: "Could not update notifications" }),
     });
   };
 

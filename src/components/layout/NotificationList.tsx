@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck, MessageSquare, RefreshCw } from "lucide-react";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import { cn, formatDate } from "@/lib/utils";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
@@ -97,6 +97,7 @@ export function NotificationRow({
  * can never report different unread counts.
  */
 export default function NotificationList({ isAdmin = false }: { isAdmin?: boolean }) {
+  const { toast } = useToastStack();
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
   const notifications = useNotifications();
@@ -124,13 +125,13 @@ export default function NotificationList({ isAdmin = false }: { isAdmin?: boolea
     // The rows themselves flip, which is the confirmation. A toast on top of
     // that would only repeat it, so only the failure needs saying.
     markAll.mutate(undefined, {
-      onError: () => toast.error("Could not update notifications"),
+      onError: () => toast({ type: "error", title: "Could not update notifications" }),
     });
   }
 
   return (
     <div className="overflow-hidden rounded-panel border border-border bg-surface">
-      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-2.5 py-2">
         <SegmentedControl
           label="Filter notifications"
           value={filter}

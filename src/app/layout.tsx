@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Inter } from "next/font/google";
-import { Toaster } from "react-hot-toast";
+import {
+  ToastStack,
+  ToastStackProvider,
+} from "@/components/arc/toast-stack/toast-stack";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import QueryProvider from "@/components/QueryProvider";
 import "@/components/arc/foundation.css";
@@ -58,20 +61,18 @@ export default function RootLayout({
       </head>
       <body className="font-body bg-background text-foreground antialiased min-h-screen">
         <QueryProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            {/*
+              The provider owns the queue and the viewport renders it. Both sit
+              above every route, so a result raised on one page survives the
+              navigation that follows it.
+            */}
+            <ToastStackProvider>
+              {children}
+              <ToastStack position="bottom-right" label="Notifications" />
+            </ToastStackProvider>
+          </ThemeProvider>
         </QueryProvider>
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            style: {
-              background: "var(--color-zinc-900)",
-              color: "var(--color-zinc-100)",
-              border: "1px solid var(--color-zinc-800)",
-              fontFamily: "var(--font-body)",
-              fontSize: "0.875rem",
-            },
-          }}
-        />
       </body>
     </html>
   );

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Bug, Copy, Link2, Sparkles } from "lucide-react";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import Navbar from "@/components/shared/Navbar";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import FileUploadZone, {
@@ -47,6 +47,7 @@ function toDateInput(date: Date | undefined) {
 
 export default function SubmitPage() {
   const router = useRouter();
+  const { toast } = useToastStack();
   const [type, setType] = useState<SubmissionType>("BUG");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -135,7 +136,9 @@ export default function SubmitPage() {
         throw new Error(err.error ?? "Something went wrong");
       }
 
-      toast.success("Submission created");
+      /* Kept: the dashboard shows the new row, but not that it was just
+         created, and the toast outlasts the navigation. */
+      toast({ type: "success", title: "Submission created" });
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

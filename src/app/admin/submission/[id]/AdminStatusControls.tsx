@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import { Button } from "@/components/arc/button/button";
 import { Select } from "@/components/arc/select/select";
 import { DatePicker } from "@/components/arc/date-picker/date-picker";
@@ -36,6 +36,7 @@ export default function AdminStatusControls({
   submission: Submission;
 }) {
   const router = useRouter();
+  const { toast } = useToastStack();
   const [status, setStatus] = useState<SubmissionStatus>(submission.status);
   const [priority, setPriority] = useState<Priority>(submission.priority);
   const [dueDate, setDueDate] = useState<Date | undefined>(
@@ -65,10 +66,11 @@ export default function AdminStatusControls({
         }),
       });
       if (!res.ok) throw new Error("Failed to update");
-      toast.success("Submission updated");
+      /* router.refresh() brings back the new status, priority, and due date, so
+         the panel itself is the confirmation. */
       router.refresh();
     } catch {
-      toast.error("Could not update the submission");
+      toast({ type: "error", title: "Could not update the submission" });
     } finally {
       setSaving(false);
     }
@@ -80,16 +82,17 @@ export default function AdminStatusControls({
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete");
-      toast.success("Submission deleted");
+      // Kept: the next page cannot show that this one is gone.
+      toast({ type: "success", title: "Submission deleted" });
       router.push("/admin");
     } catch {
-      toast.error("Could not delete the submission");
+      toast({ type: "error", title: "Could not delete the submission" });
     }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2.5">
         <Select
           label="Status"
           value={status}

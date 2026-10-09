@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Download, Paperclip } from "lucide-react";
-import toast from "react-hot-toast";
 import {
   SortableDataTable,
   type DataColumn,
@@ -12,6 +11,7 @@ import {
 import { SearchField } from "@/components/arc/search-field/search-field";
 import { Select } from "@/components/arc/select/select";
 import { Button } from "@/components/arc/button/button";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import { Avatar } from "@/components/arc/avatar/avatar";
 import {
   StatusBadge,
@@ -72,6 +72,7 @@ function prettyAction(action: BulkAction): string {
 }
 
 export default function AdminTable({ submissions }: { submissions: TableRow[] }) {
+  const { toast } = useToastStack();
   const [rows, setRows] = useState<TableRow[]>(submissions);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<SubmissionType | typeof ALL>(ALL);
@@ -179,13 +180,12 @@ export default function AdminTable({ submissions }: { submissions: TableRow[] })
         body: JSON.stringify({ ids, action, ...(value ? { value } : {}) }),
       });
       if (!res.ok) throw new Error();
-      const data = (await res.json()) as { changed?: number };
-      toast.success(
-        `${prettyAction(action)}${data.changed ? ` · ${data.changed} updated` : ""}`,
-      );
+      /* No success toast. Every action here edits, archives, or removes rows
+         that are on screen, so the table is the confirmation. Reverting on
+         failure is the part that needs saying. */
     } catch {
       setRows(snapshot);
-      toast.error(`Failed to ${action}`);
+      toast({ type: "error", title: prettyAction(action) + " failed" });
     }
   }
 

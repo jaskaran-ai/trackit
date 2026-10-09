@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight, GripVertical } from "lucide-react";
-import toast from "react-hot-toast";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { TypeBadge, PriorityBadge, StatusBadge } from "@/components/shared/Badges";
 import { Avatar } from "@/components/arc/avatar/avatar";
 import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import AgingBadge from "@/components/admin/AgingBadge";
 import VoteButton from "@/components/shared/VoteButton";
 import { PROJECT_LABELS, STATUS_LABELS } from "@/lib/labels";
@@ -135,6 +135,7 @@ export default function KanbanBoard({
 }: {
   submissions: KanbanSubmission[];
 }) {
+  const { toast } = useToastStack();
   const [submissions, setSubmissions] = useState(initialSubmissions);
 
   async function handleStatusChange(id: string, newStatus: SubmissionStatus) {
@@ -150,10 +151,11 @@ export default function KanbanBoard({
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`Moved to ${STATUS_LABELS[newStatus]}`);
+      /* No success toast: the card is already sitting in its new column, which
+         is the confirmation. The revert below is what needs saying. */
     } catch {
       setSubmissions(previous);
-      toast.error("Could not update the status");
+      toast({ type: "error", title: "Could not update the status" });
     }
   }
 

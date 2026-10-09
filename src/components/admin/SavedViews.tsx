@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Bookmark, BookmarkPlus, Trash2 } from "lucide-react";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import { Button } from "@/components/arc/button/button";
 import { Input } from "@/components/arc/input/input";
 import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
@@ -25,6 +25,7 @@ export default function SavedViews({
   filters: SavedViewFilters;
   onApply: (filters: SavedViewFilters) => void;
 }) {
+  const { toast } = useToastStack();
   const viewsQuery = useSavedViews();
   const createView = useCreateSavedView();
   const deleteView = useDeleteSavedView();
@@ -44,17 +45,17 @@ export default function SavedViews({
         onSuccess: () => {
           setName("");
           setNaming(false);
-          toast.success("View saved");
+          // The chip is in the list by now.
         },
-        onError: () => toast.error("Could not save the view"),
+        onError: () => toast({ type: "error", title: "Could not save the view" }),
       },
     );
   };
 
   const handleDelete = (id: string) => {
     deleteView.mutate(id, {
-      onSuccess: () => toast.success("View deleted"),
-      onError: () => toast.error("Could not delete the view"),
+      // The chip is gone; a toast saying so would be redundant.
+      onError: () => toast({ type: "error", title: "Could not delete the view" }),
     });
   };
 

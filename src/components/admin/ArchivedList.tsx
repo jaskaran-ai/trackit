@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { RotateCcw, Trash2, Inbox } from "lucide-react";
 import { StatusBadge, TypeBadge, ProjectBadge } from "@/components/shared/Badges";
 import { cn, formatDate } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import type { SubmissionWithUser } from "@/types";
 import {
   useArchivedSubmissions,
@@ -93,6 +93,7 @@ export default function ArchivedList({
 }: {
   submissions: SubmissionWithUser[];
 }) {
+  const { toast } = useToastStack();
   const archived = useArchivedSubmissions(submissions);
   const restore = useRestoreArchivedSubmission();
   const destroy = useDeleteArchivedSubmission();
@@ -121,8 +122,8 @@ export default function ArchivedList({
   const handleRestore = (id: string) => {
     setBusyId(id);
     restore.mutate(id, {
-      onSuccess: () => toast.success("Submission restored"),
-      onError: () => toast.error("Could not restore submission"),
+      // It is back in the list; nothing else needs saying.
+      onError: () => toast({ type: "error", title: "Could not restore the submission" }),
       onSettled: () => setBusyId(null),
     });
   };
@@ -131,8 +132,8 @@ export default function ArchivedList({
     setConfirmDeleteId(null);
     setBusyId(id);
     destroy.mutate(id, {
-      onSuccess: () => toast.success("Deleted permanently"),
-      onError: () => toast.error("Could not delete submission"),
+      // It is gone from the archive.
+      onError: () => toast({ type: "error", title: "Could not delete the submission" }),
       onSettled: () => setBusyId(null),
     });
   };

@@ -1,6 +1,5 @@
 "use client";
 
-import toast from "react-hot-toast";
 import { ThemeSwitch } from "@/components/arc/theme-switch/theme-switch";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { useTheme, type ThemePreference } from "@/components/theme/ThemeProvider";
@@ -50,9 +49,10 @@ export default function ThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme();
 
   function handleChange(next: "light" | "dark") {
+    // The whole page repaints on this. A toast on top of that would only
+    // confirm what is already on screen.
     if (next === resolvedTheme && theme === next) return;
     setTheme(next);
-    toast.success(`Theme set to ${THEME_LABELS[next].toLowerCase()}`);
   }
 
   return (

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ShieldCheck } from "lucide-react";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import {
   SortableDataTable,
   type DataColumn,
@@ -21,6 +21,7 @@ export default function UserManagement({
   users: AdminUserRow[];
   currentUserId: string;
 }) {
+  const { toast } = useToastStack();
   const [rows, setRows] = useState<AdminUserRow[]>(users);
   const [query, setQuery] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -51,12 +52,14 @@ export default function UserManagement({
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error || "Could not update the role");
       }
-      toast.success(
-        `${user.name} is now ${nextRole === "admin" ? "an admin" : "a user"}`,
-      );
+      /* The badge in this row already shows the new role, so there is nothing
+         to confirm. */
     } catch (err) {
       setRows(snapshot);
-      toast.error(err instanceof Error ? err.message : "Could not update the role");
+      toast({
+        type: "error",
+        title: err instanceof Error ? err.message : "Could not update the role",
+      });
     } finally {
       setPendingId(null);
     }

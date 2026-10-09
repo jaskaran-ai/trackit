@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ArrowBigUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 
 interface VoteButtonProps {
   submissionId: string;
@@ -27,6 +27,7 @@ export default function VoteButton({
 }: VoteButtonProps) {
   const needsHydration = initialCount === undefined || initialHasVoted === undefined;
 
+  const { toast } = useToastStack();
   const [count, setCount] = useState(initialCount ?? 0);
   const [hasVoted, setHasVoted] = useState(initialHasVoted ?? false);
   const [pending, setPending] = useState(false);
@@ -76,7 +77,7 @@ export default function VoteButton({
     } catch {
       setCount(previous.count);
       setHasVoted(previous.hasVoted);
-      toast.error("Could not update your vote");
+      toast({ type: "error", title: "Could not update your vote" });
     } finally {
       setPending(false);
     }
