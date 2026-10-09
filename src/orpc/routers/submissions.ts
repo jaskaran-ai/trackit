@@ -3,16 +3,23 @@ import path from "path";
 import fs from "fs/promises";
 import {
   archiveSubmission,
+  bulkArchiveSubmissions,
+  bulkHardDeleteSubmissions,
+  bulkRestoreSubmissions,
+  bulkUpdateSubmissions,
   countSubmissions,
   createSubmission,
+  DEFAULT_LIST_LIMIT,
   getSubmissionById,
   hardDeleteSubmission,
   listAttachmentsForSubmission,
+  listAttachmentsForSubmissions,
   listSubmissions,
   restoreSubmission,
   updateSubmission,
 } from "@/db/submissions";
-import type { Priority, Project, SubmissionStatus, SubmissionType } from "@/db/types";
+import { countVotesBySubmission, listVotedSubmissionIds } from "@/db/votes";
+import type { Priority, SubmissionStatus } from "@/db/types";
 import {
   PRIORITIES,
   PROJECTS,
@@ -58,9 +65,10 @@ const attachmentSchema = z.object({
   mimeType: z.string(),
 });
 
-/** Removes a submission's stored files, best effort. */
-async function unlinkAttachments(submissionId: string) {
-  const attachments = await listAttachmentsForSubmission(submissionId);
+/** Best-effort unlink of stored attachment files under /public. */
+async function unlinkAttachmentFiles(
+  attachments: Array<{ fileUrl: string }>,
+) {
   for (const attachment of attachments) {
     try {
       await fs.unlink(path.join(process.cwd(), "public", attachment.fileUrl));
@@ -91,24 +99,29 @@ export const submissionsRouter = {
         ...(input.search ? { search: input.search } : {}),
       };
 
-      const limit =
-        input.limit !== undefined && Number.isFinite(input.limit) && input.limit > 0
-          ? input.limit
-          : undefined;
+      // Admins load the full lean board (client-side filters). Users stay capped.
+      const hasLimit =
+        input.limit !== undefined && Number.isFinite(input.limit) && input.limit > 0;
+      const limit = hasLimit
+        ? input.limit
+        : isAdmin
+          ? undefined
+          : DEFAULT_LIST_LIMIT;
       const offset =
         input.offset !== undefined && Number.isFinite(input.offset) && input.offset > 0
           ? input.offset
           : undefined;
 
-      const submissions = await listSubmissions({
-        ...shared,
-        ...(input.sort ? { sort: input.sort, dir: input.dir } : {}),
-        ...(limit ? { limit } : {}),
-        ...(offset ? { offset } : {}),
-      });
-
-      // Total is the unpaginated count so clients can render pager controls.
-      const total = await countSubmissions(shared);
+      const [submissions, total] = await Promise.all([
+        listSubmissions({
+          ...shared,
+          lean: true,
+          ...(input.sort ? { sort: input.sort, dir: input.dir } : {}),
+          ...(limit !== undefined ? { limit } : { unlimited: true }),
+          ...(offset ? { offset } : {}),
+        }),
+        countSubmissions(shared),
+      ]);
 
       return { submissions, total };
     }),
@@ -197,8 +210,7 @@ export const submissionsRouter = {
 
       if (input.permanent) {
         // Unlink files first so a failed delete can't orphan stored assets.
-        await unlinkAttachments(input.id);
-
+        await unlinkAttachmentFiles(await listAttachmentsForSubmission(input.id));
         if (!(await hardDeleteSubmission(input.id))) throw notFound();
 
         return { success: true, permanent: true };
@@ -247,34 +259,33 @@ export const submissionsRouter = {
       const actorId = context.auth.user.id;
       let changed = 0;
 
-      for (const id of input.ids) {
-        switch (input.action) {
-          case "status":
-            await updateSubmission(
-              id,
-              { status: input.value as SubmissionStatus },
-              actorId,
-            );
-            break;
-          case "priority":
-            await updateSubmission(
-              id,
-              { priority: input.value as Priority },
-              actorId,
-            );
-            break;
-          case "archive":
-            await archiveSubmission(id, actorId);
-            break;
-          case "restore":
-            await restoreSubmission(id, actorId);
-            break;
-          case "delete":
-            await unlinkAttachments(id);
-            await hardDeleteSubmission(id);
-            break;
+      switch (input.action) {
+        case "status":
+          changed = await bulkUpdateSubmissions(
+            input.ids,
+            { status: input.value as SubmissionStatus },
+            actorId,
+          );
+          break;
+        case "priority":
+          changed = await bulkUpdateSubmissions(
+            input.ids,
+            { priority: input.value as Priority },
+            actorId,
+          );
+          break;
+        case "archive":
+          changed = await bulkArchiveSubmissions(input.ids, actorId);
+          break;
+        case "restore":
+          changed = await bulkRestoreSubmissions(input.ids, actorId);
+          break;
+        case "delete": {
+          const attachments = await listAttachmentsForSubmissions(input.ids);
+          await unlinkAttachmentFiles(attachments);
+          changed = await bulkHardDeleteSubmissions(input.ids);
+          break;
         }
-        changed += 1;
       }
 
       return { success: true, changed };
@@ -291,7 +302,13 @@ export const submissionsRouter = {
       if (context.auth.user.role !== "admin") throw forbidden();
 
       const [submissions, total] = await Promise.all([
-        listSubmissions({ includeDeleted: true, sort: "createdAt", dir: "desc" }),
+        listSubmissions({
+          includeDeleted: true,
+          lean: true,
+          unlimited: true,
+          sort: "createdAt",
+          dir: "desc",
+        }),
         countSubmissions({ includeDeleted: true }),
       ]);
 
@@ -322,8 +339,90 @@ export const submissionsRouter = {
         ...(input.priority ? { priority: input.priority } : {}),
         ...(input.project ? { project: input.project } : {}),
         ...(input.search ? { search: input.search } : {}),
+        lean: false,
+        unlimited: true,
         sort: "createdAt",
         dir: "desc",
       });
+    }),
+
+
+  /**
+   * Dashboard bootstrap: counts + lean board rows + feature vote state in one
+   * round trip so the home page does not fan out to count/list/votes.
+   */
+  summary: protectedProcedure
+    .route({ method: "GET", path: "/submissions/summary" })
+    .input(z.void().optional())
+    .handler(async ({ context }) => {
+      const { user } = context.auth;
+      const isAdmin = user.role === "admin";
+      const scope = isAdmin ? {} : { userId: user.id };
+
+      const [total, open, bugs, features, submissions] = await Promise.all([
+        countSubmissions(scope),
+        countSubmissions({
+          ...scope,
+          status: ["OPEN", "IN_PROGRESS", "REVIEW"],
+        }),
+        countSubmissions({ ...scope, type: "BUG" }),
+        countSubmissions({ ...scope, type: "FEATURE" }),
+        listSubmissions({ ...scope, lean: true }),
+      ]);
+
+      const featureIds = submissions
+        .filter((row) => row.type === "FEATURE")
+        .map((row) => row.id);
+
+      const [counts, votedIds] = await Promise.all([
+        countVotesBySubmission(featureIds),
+        listVotedSubmissionIds(featureIds, user.id),
+      ]);
+
+      return {
+        total,
+        open,
+        bugs,
+        features,
+        submissions,
+        totalRows: total,
+        votes: {
+          counts: Object.fromEntries(counts),
+          votedIds: Array.from(votedIds),
+        },
+      };
+    }),
+  /**
+   * Count-only filter for dashboard metrics. Each metric card can fetch its
+   * own total in parallel without loading submission rows.
+   */
+  count: protectedProcedure
+    .route({ method: "GET", path: "/submissions/count" })
+    .input(
+      submissionFiltersSchema.extend({
+        status: z
+          .union([
+            z.enum(SUBMISSION_STATUSES),
+            z.array(z.enum(SUBMISSION_STATUSES)),
+          ])
+          .optional(),
+      }),
+    )
+    .handler(async ({ input, context }) => {
+      const { user } = context.auth;
+      const isAdmin = user.role === "admin";
+      const withDeleted = isAdmin && input.includeDeleted === true;
+
+      const total = await countSubmissions({
+        ...(isAdmin ? {} : { userId: user.id }),
+        ...(withDeleted ? { includeDeleted: true } : {}),
+        ...(input.type ? { type: input.type } : {}),
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.priority ? { priority: input.priority } : {}),
+        ...(input.project ? { project: input.project } : {}),
+        ...(input.search ? { search: input.search } : {}),
+      });
+
+      return { total };
     }),
 };

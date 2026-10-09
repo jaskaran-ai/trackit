@@ -2,12 +2,13 @@ import { z } from "zod";
 import { getSubmissionStats, listSubmissions } from "@/db/submissions";
 import { listUsers, updateUserRole } from "@/db/users";
 import { createSavedView, deleteSavedView, listSavedViews } from "@/db/views";
-import type { Role } from "@/db/types";
+import { countVotesBySubmission, listVotedSubmissionIds } from "@/db/votes";
 import {
   PRIORITIES,
   PROJECTS,
   SUBMISSION_STATUSES,
   SUBMISSION_TYPES,
+  type Role,
 } from "@/db/types";
 import { adminProcedure, badRequest, notFound } from "@/orpc/context";
 
@@ -103,6 +104,24 @@ export const adminRouter = {
       if (!deleted) throw notFound();
 
       return { success: true };
+    }),
+
+  /**
+   * Vote state for a set of submissions, batched so the admin table and kanban
+   * each fire one request instead of one per row.
+   */
+  voteBoard: adminProcedure
+    .route({ method: "GET", path: "/admin/votes" })
+    .input(z.object({ ids: z.array(z.string()) }))
+    .handler(async ({ input, context }) => {
+      const [counts, votedIds] = await Promise.all([
+        countVotesBySubmission(input.ids),
+        listVotedSubmissionIds(input.ids, context.auth.user.id),
+      ]);
+      return {
+        counts: Object.fromEntries(counts),
+        votedIds: Array.from(votedIds),
+      };
     }),
 
   /**

@@ -2,14 +2,14 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createComment, deleteComment, getCommentById, listComments } from "@/db/comments";
 import { createNotification } from "@/db/notifications";
-import { getSubmissionById } from "@/db/submissions";
+import { getSubmissionAccessRow } from "@/db/submissions";
 import { badRequest, forbidden, notFound, protectedProcedure } from "@/orpc/context";
 
 const paramsSchema = z.object({ id: z.string() });
 
 /** Resolves a submission the caller is allowed to see, or throws 404/403. */
 async function requireVisibleSubmission(userId: string, role: string, submissionId: string) {
-  const submission = await getSubmissionById(submissionId);
+  const submission = await getSubmissionAccessRow(submissionId);
   if (!submission) throw notFound();
   if (role !== "admin" && submission.userId !== userId) throw forbidden();
   return submission;
