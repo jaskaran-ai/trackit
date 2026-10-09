@@ -1,49 +1,92 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Inbox, Search, SlidersHorizontal, X } from "lucide-react";
-import { PRIORITY_COLORS, PROJECT_LABELS, STATUS_LABELS, TYPE_COLORS } from "@/lib/utils";
+import { Inbox } from "lucide-react";
+import { SearchField } from "@/components/arc/search-field/search-field";
+import { Select } from "@/components/arc/select/select";
+import { FilterToolbar, type FilterChip } from "@/components/arc/filter-toolbar/filter-toolbar";
+import { EmptyState } from "@/components/arc/empty-state/empty-state";
+import { Button } from "@/components/arc/button/button";
 import SubmissionCard from "@/components/shared/SubmissionCard";
+import { PRIORITY_LABELS, PROJECT_LABELS, STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
+import {
+  PRIORITIES,
+  PROJECTS,
+  SUBMISSION_STATUSES,
+  SUBMISSION_TYPES,
+  type Priority,
+  type Project,
+  type SubmissionStatus,
+  type SubmissionType,
+} from "@/db/types";
 import type { SubmissionWithUser } from "@/types";
 
 type SortKey = "newest" | "oldest" | "title" | "priority" | "status";
 
-const STATUS_OPTIONS = Object.keys(STATUS_LABELS);
-const PRIORITY_OPTIONS = Object.keys(PRIORITY_COLORS);
-const PROJECT_OPTIONS = Object.keys(PROJECT_LABELS);
-const TYPE_OPTIONS = Object.keys(TYPE_COLORS);
-
-// Token → label without a second hardcoded map: LOW → Low, IN_PROGRESS → In progress.
-function humanise(token: string) {
-  const words = token.toLowerCase().split("_");
-  return words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
-}
-
-// Rank comes from the shared label maps so ordering can never drift from them.
-const STATUS_RANK = new Map(STATUS_OPTIONS.map((s, i) => [s, i]));
-const PRIORITY_RANK = new Map(PRIORITY_OPTIONS.map((p, i) => [p, i]));
+/* Rank comes from the canonical member order, so a status added to the database
+   sorts into the sequence instead of falling to the end of every list. */
+const STATUS_RANK = new Map(SUBMISSION_STATUSES.map((value, index) => [value, index]));
+const PRIORITY_RANK = new Map(PRIORITIES.map((value, index) => [value, index]));
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "newest", label: "Newest first" },
   { value: "oldest", label: "Oldest first" },
-  { value: "title", label: "Title A–Z" },
+  { value: "title", label: "Title A to Z" },
   { value: "priority", label: "Priority" },
   { value: "status", label: "Status" },
 ];
 
-const SELECT_CLASS =
-  "bg-zinc-900 border border-zinc-800 focus:border-indigo-500/60 rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none transition-colors cursor-pointer";
+type Filters = {
+  search: string;
+  status: string;
+  type: string;
+  priority: string;
+  project: string;
+  sort: SortKey;
+};
 
-const EMPTY_FILTERS = {
+const EMPTY_FILTERS: Filters = {
   search: "",
   status: "",
   type: "",
   priority: "",
   project: "",
-  sort: "newest" as SortKey,
+  sort: "newest",
 };
 
-export default function DashboardFilters({ submissions }: { submissions: SubmissionWithUser[] }) {
+const FILTER_FIELDS = [
+  {
+    id: "status",
+    label: "Status",
+    options: SUBMISSION_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] })),
+    read: (value: string) => STATUS_LABELS[value as SubmissionStatus] ?? value,
+  },
+  {
+    id: "type",
+    label: "Type",
+    options: SUBMISSION_TYPES.map((value) => ({ value, label: TYPE_LABELS[value] })),
+    read: (value: string) => TYPE_LABELS[value as SubmissionType] ?? value,
+  },
+  {
+    id: "priority",
+    label: "Priority",
+    options: PRIORITIES.map((value) => ({ value, label: PRIORITY_LABELS[value] })),
+    read: (value: string) => PRIORITY_LABELS[value as Priority] ?? value,
+  },
+  {
+    id: "project",
+    label: "Project",
+    options: PROJECTS.map((value) => ({ value, label: PROJECT_LABELS[value] })),
+    read: (value: string) => PROJECT_LABELS[value as Project] ?? value,
+  },
+] as const;
+
+
+export default function DashboardFilters({
+  submissions,
+}: {
+  submissions: SubmissionWithUser[];
+}) {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
 
   const filtered = useMemo(() => {
@@ -58,7 +101,8 @@ export default function DashboardFilters({ submissions }: { submissions: Submiss
       return true;
     });
 
-    const time = (value: SubmissionWithUser["createdAt"]) => new Date(value).getTime();
+    const time = (value: SubmissionWithUser["createdAt"]) =>
+      new Date(value).getTime();
 
     return [...rows].sort((a, b) => {
       switch (filters.sort) {
@@ -68,12 +112,14 @@ export default function DashboardFilters({ submissions }: { submissions: Submiss
           return a.title.localeCompare(b.title);
         case "priority":
           return (
-            (PRIORITY_RANK.get(a.priority) ?? 99) - (PRIORITY_RANK.get(b.priority) ?? 99) ||
+            (PRIORITY_RANK.get(a.priority) ?? 99) -
+              (PRIORITY_RANK.get(b.priority) ?? 99) ||
             time(b.createdAt) - time(a.createdAt)
           );
         case "status":
           return (
-            (STATUS_RANK.get(a.status) ?? 99) - (STATUS_RANK.get(b.status) ?? 99) ||
+            (STATUS_RANK.get(a.status) ?? 99) -
+              (STATUS_RANK.get(b.status) ?? 99) ||
             time(b.createdAt) - time(a.createdAt)
           );
         case "newest":
@@ -83,143 +129,141 @@ export default function DashboardFilters({ submissions }: { submissions: Submiss
     });
   }, [submissions, filters]);
 
+  /* Only the facet filters become chips. The search text and the sort order are
+     not a filter and showing them as removable chips reads as if they were. */
+  const activeChips: FilterChip[] = FILTER_FIELDS.flatMap((field) => {
+    const value = filters[field.id] as string;
+    // Each field's chip reads "Critical", not "CRITICAL".
+    return value ? [{ id: field.id, label: field.label, value: field.read(value) }] : [];
+  });
+
   const isFiltered =
-    filters.search.trim() !== "" ||
-    filters.status !== "" ||
-    filters.type !== "" ||
-    filters.priority !== "" ||
-    filters.project !== "";
+    filters.search.trim() !== "" || activeChips.length > 0;
 
   return (
     <>
-      {/* Filter bar */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 mb-4 animate-fade-up animate-fade-up-delay-1">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-2">
-          {/* Search */}
-          <div className="relative flex-1 min-w-0">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <input
-              type="text"
+      <div className="mb-4 rounded-panel border border-border bg-surface p-3">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <div className="min-w-0 flex-1">
+            <SearchField
+              label="Search submissions"
               value={filters.search}
-              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-              placeholder="Search submissions by title…"
-              aria-label="Search submissions"
-              className="w-full bg-zinc-950 border border-zinc-800 focus:border-indigo-500/60 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition-colors"
+              onValueChange={(search) => setFilters((f) => ({ ...f, search }))}
+              placeholder="Search by title"
             />
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
-            <SlidersHorizontal size={13} className="text-zinc-600 shrink-0 hidden sm:block" />
-
-            <select
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              label="Status"
+              className="min-w-36"
               value={filters.status}
-              onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-              aria-label="Filter by status"
-              className={SELECT_CLASS}
-            >
-              <option value="">All statuses</option>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-
-            <select
+              placeholder="All statuses"
+              onValueChange={(status) => setFilters((f) => ({ ...f, status }))}
+              options={[
+                { value: "", label: "All statuses" },
+                ...SUBMISSION_STATUSES.map((value) => ({
+                  value,
+                  label: STATUS_LABELS[value],
+                })),
+              ]}
+            />
+            <Select
+              label="Type"
+              className="min-w-32"
               value={filters.type}
-              onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}
-              aria-label="Filter by type"
-              className={SELECT_CLASS}
-            >
-              <option value="">All types</option>
-              {TYPE_OPTIONS.map((type) => (
-                <option key={type} value={type}>
-                  {humanise(type)}
-                </option>
-              ))}
-            </select>
-
-            <select
+              placeholder="All types"
+              onValueChange={(type) => setFilters((f) => ({ ...f, type }))}
+              options={[
+                { value: "", label: "All types" },
+                ...Object.entries(TYPE_LABELS).map(([value, label]) => ({
+                  value,
+                  label,
+                })),
+              ]}
+            />
+            <Select
+              label="Priority"
+              className="min-w-36"
               value={filters.priority}
-              onChange={(e) => setFilters((f) => ({ ...f, priority: e.target.value }))}
-              aria-label="Filter by priority"
-              className={SELECT_CLASS}
-            >
-              <option value="">All priorities</option>
-              {PRIORITY_OPTIONS.map((priority) => (
-                <option key={priority} value={priority}>
-                  {humanise(priority)}
-                </option>
-              ))}
-            </select>
-
-            <select
+              placeholder="All priorities"
+              onValueChange={(priority) => setFilters((f) => ({ ...f, priority }))}
+              options={[
+                { value: "", label: "All priorities" },
+                ...PRIORITIES.map((value) => ({
+                  value,
+                  label: PRIORITY_LABELS[value],
+                })),
+              ]}
+            />
+            <Select
+              label="Project"
+              className="min-w-40"
               value={filters.project}
-              onChange={(e) => setFilters((f) => ({ ...f, project: e.target.value }))}
-              aria-label="Filter by project"
-              className={SELECT_CLASS}
-            >
-              <option value="">All projects</option>
-              {PROJECT_OPTIONS.map((project) => (
-                <option key={project} value={project}>
-                  {PROJECT_LABELS[project]}
-                </option>
-              ))}
-            </select>
-
-            <select
+              placeholder="All projects"
+              onValueChange={(project) => setFilters((f) => ({ ...f, project }))}
+              options={[
+                { value: "", label: "All projects" },
+                ...PROJECTS.map((value) => ({
+                  value,
+                  label: PROJECT_LABELS[value],
+                })),
+              ]}
+            />
+            <Select
+              label="Sort"
+              className="min-w-36"
               value={filters.sort}
-              onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as SortKey }))}
-              aria-label="Sort submissions"
-              className={SELECT_CLASS}
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              onValueChange={(sort) =>
+                setFilters((f) => ({ ...f, sort: sort as SortKey }))
+              }
+              options={SORT_OPTIONS}
+            />
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-zinc-800">
-          <p className="text-xs text-zinc-500">
-            Showing <span className="text-zinc-300 font-500">{filtered.length}</span> of{" "}
-            {submissions.length} submissions
+        <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-2.5">
+          <p className="text-xs text-muted">
+            Showing <span className="font-500 text-secondary">{filtered.length}</span>{" "}
+            of {submissions.length} submissions
           </p>
-          {isFiltered && (
-            <button
-              type="button"
-              onClick={() => setFilters(EMPTY_FILTERS)}
-              className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-            >
-              <X size={11} />
-              Clear filters
-            </button>
+
+          {activeChips.length > 0 && (
+            <div className="min-w-0 flex-1">
+              <FilterToolbar
+                filters={activeChips}
+                onRemove={(id) =>
+                  setFilters((f) => ({ ...f, [id]: "" }))
+                }
+                onClearAll={() =>
+                  setFilters((f) => ({
+                    ...EMPTY_FILTERS,
+                    search: f.search,
+                    sort: f.sort,
+                  }))
+                }
+              />
+            </div>
           )}
         </div>
       </div>
 
-      {/* Results */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-zinc-900 border border-zinc-800 rounded-xl">
-          <div className="w-12 h-12 bg-zinc-950 border border-zinc-800 rounded-2xl flex items-center justify-center mb-4">
-            <Inbox size={20} className="text-zinc-600" />
-          </div>
-          <h3 className="font-display text-base font-600 text-zinc-300 mb-2">No matches</h3>
-          <p className="text-sm text-zinc-600 mb-5">
-            Nothing matches these filters. Try widening the search.
-          </p>
-          <button
-            type="button"
-            onClick={() => setFilters(EMPTY_FILTERS)}
-            className="inline-flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-500 px-4 py-2 rounded-lg transition-colors cursor-pointer"
-          >
-            Clear filters
-          </button>
+        <div className="rounded-panel border border-border bg-surface">
+          <EmptyState
+            className="py-16"
+            icon={<Inbox size={20} aria-hidden />}
+            title="No matches"
+            description="Nothing matches these filters. Try widening the search."
+            action={
+              <Button variant="secondary" onClick={() => setFilters(EMPTY_FILTERS)}>
+                Clear filters
+              </Button>
+            }
+          />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-fade-up animate-fade-up-delay-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((submission) => (
             <SubmissionCard key={submission.id} submission={submission} />
           ))}

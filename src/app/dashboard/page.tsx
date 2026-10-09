@@ -1,12 +1,15 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import Link from "next/link";
 import { headers } from "next/headers";
+import { Inbox, Plus } from "lucide-react";
+import { auth } from "@/lib/auth";
 import { listSubmissions } from "@/db/submissions";
 import { countVotesBySubmission, listVotedSubmissionIds } from "@/db/votes";
 import Navbar from "@/components/shared/Navbar";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
-import Link from "next/link";
-import { Plus, Bug, Sparkles, Inbox } from "lucide-react";
+import { MetricCard } from "@/components/arc/metric-card/metric-card";
+import { EmptyState } from "@/components/arc/empty-state/empty-state";
+import { PRIMARY_LINK_CLASS } from "@/components/shared/linkButton";
 import type { SubmissionWithUser } from "@/types";
 
 // Vote state attached on the server and read by SubmissionCard, which passes it
@@ -40,68 +43,61 @@ export default async function DashboardPage() {
     hasVoted: votedIds.has(submission.id),
   })) as SubmissionWithVotes[];
 
-  const bugs = submissions.filter((s) => s.type === "BUG");
-  const features = submissions.filter((s) => s.type === "FEATURE");
-  const open = submissions.filter((s) => s.status === "OPEN");
+  const bugs = submissions.filter((s) => s.type === "BUG").length;
+  const features = submissions.filter((s) => s.type === "FEATURE").length;
+  const stillOpen = submissions.filter(
+    (s) => s.status === "OPEN" || s.status === "IN_PROGRESS" || s.status === "REVIEW",
+  ).length;
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8 animate-fade-up">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-700 text-white mb-1">
-              My Submissions
+            <h1 className="mb-1 font-display text-2xl font-500 text-foreground">
+              My submissions
             </h1>
-            <p className="text-zinc-500 text-sm">
+            <p className="text-sm text-muted">
               Welcome back, {session.user.name?.split(" ")[0]}
             </p>
           </div>
-          <Link
-            href="/submit"
-            className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-500 px-4 py-2 rounded-lg transition-colors"
-          >
-            <Plus size={15} />
-            New Submission
+
+          <Link href="/submit" className={PRIMARY_LINK_CLASS}>
+            <Plus size={15} aria-hidden />
+            New submission
           </Link>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-8 animate-fade-up animate-fade-up-delay-1">
-          {[
-            { label: "Total", value: submissions.length, color: "text-white" },
-            { label: "Bugs", value: bugs.length, color: "text-red-400", icon: Bug },
-            { label: "Features", value: features.length, color: "text-violet-400", icon: Sparkles },
-          ].map(({ label, value, color, icon: Icon }) => (
-            <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <div className={`font-display text-2xl font-700 ${color} mb-0.5`}>{value}</div>
-              <div className="text-xs text-zinc-500 flex items-center gap-1">
-                {Icon && <Icon size={11} />}
-                {label}
-              </div>
-            </div>
-          ))}
+        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <MetricCard
+            label="Total"
+            value={submissions.length}
+            context={`${stillOpen} still in progress`}
+          />
+          <MetricCard label="Bug reports" value={bugs} context="Reported by you" />
+          <MetricCard
+            label="Feature requests"
+            value={features}
+            context="Reported by you"
+          />
         </div>
 
-        {/* Submissions list */}
         {submissions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 animate-fade-up animate-fade-up-delay-2">
-            <div className="w-14 h-14 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center mb-4">
-              <Inbox size={22} className="text-zinc-600" />
-            </div>
-            <h3 className="font-display text-base font-600 text-zinc-300 mb-2">No submissions yet</h3>
-            <p className="text-sm text-zinc-600 mb-6">
-              Found a bug or have a feature idea? Let the team know.
-            </p>
-            <Link
-              href="/submit"
-              className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-500 px-4 py-2 rounded-lg transition-colors"
-            >
-              <Plus size={15} />
-              Create your first submission
-            </Link>
+          <div className="rounded-panel border border-border bg-surface">
+            <EmptyState
+              className="py-20"
+              icon={<Inbox size={22} aria-hidden />}
+              title="No submissions yet"
+              description="Found a bug or have a feature idea? Let the team know."
+              action={
+                <Link href="/submit" className={PRIMARY_LINK_CLASS}>
+                  <Plus size={15} aria-hidden />
+                  Create your first submission
+                </Link>
+              }
+            />
           </div>
         ) : (
           <DashboardFilters submissions={submissionsWithVotes} />
