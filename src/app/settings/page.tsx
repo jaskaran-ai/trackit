@@ -28,20 +28,20 @@ export default async function SettingsPage() {
   const isAdmin = profile.role === "admin";
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
-        <div className="mb-8 animate-fade-up">
-          <h1 className="font-display text-2xl font-700 text-white mb-1">Settings</h1>
-          <p className="text-zinc-500 text-sm">Your profile and how TrackIt looks to you.</p>
+        <div className="mb-8">
+          <h1 className="font-display text-2xl font-500 text-foreground mb-1">Settings</h1>
+          <p className="text-muted text-sm">Your profile and how TrackIt looks to you.</p>
         </div>
 
         <div className="space-y-4">
           {/* Profile */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 sm:p-6 animate-fade-up animate-fade-up-delay-1">
-            <h2 className="font-display text-sm font-600 text-zinc-200 mb-4">Profile</h2>
+          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5 sm:p-6">
+            <h2 className="font-display text-sm font-500 text-foreground mb-4">Profile</h2>
 
             <div className="flex items-center gap-4">
               {profile.image ? (
@@ -51,32 +51,32 @@ export default async function SettingsPage() {
                   className="w-12 h-12 rounded-full shrink-0"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center text-lg text-white font-600 shrink-0">
+                <div className="w-12 h-12 rounded-full bg-accent text-accent-foreground font-500 shrink-0">
                   {profile.name?.[0]}
                 </div>
               )}
 
               <div className="min-w-0">
-                <p className="text-sm font-600 text-zinc-100 truncate">{profile.name}</p>
-                <p className="text-xs text-zinc-500 truncate">{profile.email}</p>
+                <p className="text-sm font-500 text-foreground truncate">{profile.name}</p>
+                <p className="text-xs text-muted truncate">{profile.email}</p>
                 {isAdmin && (
-                  <span className="inline-flex items-center gap-1 mt-1 text-xs bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded">
+                  <span className="inline-flex items-center gap-1 mt-1 text-xs bg-accent-subtle text-accent border border-border px-1.5 py-0.5 rounded">
                     <ShieldCheck size={10} /> Admin
                   </span>
                 )}
               </div>
             </div>
 
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5 pt-5 border-t border-zinc-800">
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5 pt-5 border-t border-[var(--border-subtle)]">
               <div>
-                <dt className="text-xs text-zinc-500 mb-0.5">Role</dt>
-                <dd className="text-sm font-500 text-zinc-200">
+                <dt className="text-xs text-muted mb-0.5">Role</dt>
+                <dd className="text-sm font-500 text-foreground">
                   {isAdmin ? "Administrator" : "Member"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-zinc-500 mb-0.5">Member since</dt>
-                <dd className="text-sm font-500 text-zinc-200">
+                <dt className="text-xs text-muted mb-0.5">Member since</dt>
+                <dd className="text-sm font-500 text-foreground">
                   {profile.createdAt ? formatDate(profile.createdAt) : "Not available"}
                 </dd>
               </div>
@@ -84,7 +84,7 @@ export default async function SettingsPage() {
           </div>
 
           {/* Preferences */}
-          <div className="animate-fade-up animate-fade-up-delay-2">
+          <div className="">
             <PreferencesForm initial={preferences} />
           </div>
         </div>
