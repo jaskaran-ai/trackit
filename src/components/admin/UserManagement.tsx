@@ -140,10 +140,10 @@ export default function UserManagement({
   ];
 
   return (
-    <section className="rounded-panel border border-border bg-surface p-3 sm:p-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
-        <h2 className="flex items-center gap-2 font-display text-lg font-500 text-foreground">
-          <ShieldCheck size={18} aria-hidden className="text-accent" />
+    <section className="overflow-hidden rounded-panel border border-border bg-surface">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-[var(--border-subtle)] p-3">
+        <h2 className="flex items-center gap-2 font-display text-base font-500 text-foreground">
+          <ShieldCheck size={16} aria-hidden className="text-accent" />
           User management
         </h2>
         <div className="w-full sm:w-64">

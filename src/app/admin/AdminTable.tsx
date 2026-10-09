@@ -23,7 +23,7 @@ import AgingBadge from "@/components/admin/AgingBadge";
 import BulkActions, { type BulkAction } from "@/components/admin/BulkActions";
 import SavedViews from "@/components/admin/SavedViews";
 import VoteButton from "@/components/shared/VoteButton";
-import { formatDate } from "@/lib/utils";
+import { submissionAttachmentCount } from "@/lib/utils";
 import {
   PRIORITY_LABELS,
   PROJECT_LABELS,
@@ -194,18 +194,21 @@ export default function AdminTable({ submissions }: { submissions: TableRow[] })
       key: "title",
       label: "Title",
       sortable: true,
-      render: (_value, row) => (
-        <span className="block max-w-[220px]">
-          <span className="line-clamp-1 text-foreground">{row.title}</span>
-          {row.attachments.length > 0 && (
-            <span className="mt-0.5 flex items-center gap-1 text-xs text-muted">
-              <Paperclip size={10} aria-hidden />
-              {row.attachments.length}
-              <span className="sr-only"> attachments</span>
-            </span>
-          )}
-        </span>
-      ),
+      render: (_value, row) => {
+        const attachmentCount = submissionAttachmentCount(row);
+        return (
+          <span className="flex min-w-0 max-w-[260px] items-center gap-1.5">
+            <span className="truncate text-foreground">{row.title}</span>
+            {attachmentCount > 0 && (
+              <span className="flex shrink-0 items-center gap-0.5 text-xs text-muted">
+                <Paperclip size={10} aria-hidden />
+                {attachmentCount}
+                <span className="sr-only"> attachments</span>
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     {
       key: "type",
@@ -228,25 +231,21 @@ export default function AdminTable({ submissions }: { submissions: TableRow[] })
     {
       key: "createdAt",
       label: "Date",
+      width: 225,
       sortable: true,
       render: (_value, row) => (
-        <span className="flex flex-col gap-1">
-          <span className="text-xs text-secondary">
-            {formatDate(row.createdAt)}
+        <span className="flex items-center gap-1.5">
+          <span className="whitespace-nowrap text-secondary">
+            {new Date(row.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {", "}
+            {new Date(row.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
           </span>
-          <span className="flex flex-wrap items-center gap-1.5">
-            <AgingBadge
-              createdAt={row.createdAt}
-              dueDate={row.dueDate}
-              status={row.status}
-              resolvedAt={row.resolvedAt}
-            />
-            {row.dueDate && (
-              <span className="text-xs text-muted">
-                due {formatDate(row.dueDate)}
-              </span>
-            )}
-          </span>
+          <AgingBadge
+            createdAt={row.createdAt}
+            dueDate={row.dueDate}
+            status={row.status}
+            resolvedAt={row.resolvedAt}
+          />
         </span>
       ),
     },
@@ -262,7 +261,7 @@ export default function AdminTable({ submissions }: { submissions: TableRow[] })
             size="sm"
           />
         ) : (
-          <span className="text-muted">Not votable</span>
+          <span aria-hidden="true" className="text-muted">–</span>
         ),
     },
     {
@@ -275,13 +274,13 @@ export default function AdminTable({ submissions }: { submissions: TableRow[] })
       key: "reporter",
       label: "Reporter",
       render: (_value, row) => (
-        <span className="flex min-w-0 items-center gap-1.5">
+        <span className="flex min-w-0 items-center gap-2">
           <Avatar
             name={row.user.name ?? "Unknown"}
             src={row.user.image ?? undefined}
             size="sm"
           />
-          <span className="max-w-[120px] truncate text-xs text-secondary">
+          <span className="max-w-[180px] truncate text-sm text-secondary">
             {row.user.name}
           </span>
         </span>
@@ -293,7 +292,7 @@ export default function AdminTable({ submissions }: { submissions: TableRow[] })
       render: (_value, row) => (
         <Link
           href={`/admin/submission/${row.id}`}
-          className="text-xs text-accent transition-opacity hover:underline"
+          className="text-sm text-accent transition-opacity hover:underline"
         >
           View
           <span className="sr-only"> {row.title}</span>
@@ -306,7 +305,7 @@ export default function AdminTable({ submissions }: { submissions: TableRow[] })
     <div className="overflow-hidden rounded-panel border border-border bg-surface">
       {/* Facets */}
       <div className="space-y-2.5 border-b border-[var(--border-subtle)] p-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-[180px] flex-1">
             <SearchField
               label="Search submissions"

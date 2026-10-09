@@ -58,8 +58,8 @@ export default function AgingBadge({
 
   const tone: BadgeTone = isPastDue || days >= RED_DAYS ? "danger" : days >= AMBER_DAYS ? "warning" : "success";
 
-  const title = isPastDue
-    ? `Open ${days} days, due ${formatDate(due as Date)}`
+  const title = due
+    ? `Open ${days} days, due ${formatDate(due)}`
     : `Open ${days} days`;
 
   return (

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Bookmark, BookmarkPlus, Trash2 } from "lucide-react";
 import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
+import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { Button } from "@/components/arc/button/button";
 import { Input } from "@/components/arc/input/input";
 import { ConfirmMorph } from "@/components/arc/confirm-morph/confirm-morph";
@@ -64,7 +65,7 @@ export default function SavedViews({
       <span className="hidden text-xs text-muted sm:inline">Saved</span>
 
       {loading ? (
-        <div className="skeleton h-7 w-16 rounded-control" />
+        <Skeleton lines={1} label="Loading saved views" />
       ) : (
         views.map((view) => (
           <span
