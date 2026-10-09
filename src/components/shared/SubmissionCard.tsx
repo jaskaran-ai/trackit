@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Clock, Paperclip } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, submissionAttachmentCount } from "@/lib/utils";
 import { Avatar } from "@/components/arc/avatar/avatar";
 import { StatusBadge, TypeBadge, PriorityBadge } from "./Badges";
 import VoteButton from "./VoteButton";
@@ -25,22 +25,23 @@ export default function SubmissionCard({ submission, isAdmin }: SubmissionCardPr
     : `/submission/${submission.id}`;
 
   const isFeature = submission.type === "FEATURE";
-  const hasAttachments = submission.attachments.length > 0;
+  const attachmentCount = submissionAttachmentCount(submission);
+  const hasAttachments = attachmentCount > 0;
 
   return (
     // The card is not one link: the title region navigates, the footer holds the
     // vote control, and nesting a button inside a link would make clicking it
     // ambiguous.
     <div className="flex flex-col rounded-panel border border-border bg-surface transition-colors hover:border-border-strong">
-      <Link href={href} className="group block flex-1 p-3">
-        <div className="mb-2.5 flex items-start justify-between gap-2.5">
+      <Link href={href} className="group block flex-1 p-3.5 sm:p-4">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <h3 className="line-clamp-1 flex-1 text-sm font-500 leading-snug text-foreground group-hover:underline">
             {submission.title}
           </h3>
           <StatusBadge status={submission.status} />
         </div>
 
-        <div className="mb-2.5 flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <TypeBadge type={submission.type} />
           <PriorityBadge priority={submission.priority} />
         </div>
@@ -60,7 +61,7 @@ export default function SubmissionCard({ submission, isAdmin }: SubmissionCardPr
       </Link>
 
       {/* Footer — deliberately outside the Link */}
-      <div className="flex items-center gap-2.5 border-t border-[var(--border-subtle)] px-3 py-2.5 text-xs text-muted">
+      <div className="flex items-center gap-2.5 border-t border-[var(--border-subtle)] px-3.5 py-3 text-xs text-muted sm:px-4">
         {isFeature && (
           <VoteButton
             submissionId={submission.id}
@@ -78,7 +79,7 @@ export default function SubmissionCard({ submission, isAdmin }: SubmissionCardPr
           {hasAttachments && (
             <span className="flex items-center gap-1">
               <Paperclip size={11} aria-hidden />
-              {submission.attachments.length}
+              {attachmentCount}
               <span className="sr-only"> attachments</span>
             </span>
           )}

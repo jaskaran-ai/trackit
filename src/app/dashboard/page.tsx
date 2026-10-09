@@ -1,111 +1,81 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { headers } from "next/headers";
-import { Inbox, Plus } from "lucide-react";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { auth } from "@/lib/auth";
-import { listSubmissions } from "@/db/submissions";
-import { countVotesBySubmission, listVotedSubmissionIds } from "@/db/votes";
+import { countSubmissions, listSubmissions } from "@/db/submissions";
+import {
+  countVotesBySubmission,
+  listVotedSubmissionIds,
+} from "@/db/votes";
+import { countUnreadNotifications } from "@/db/notifications";
+import { getQueryClient, queryKeys } from "@/lib/query-client";
 import Navbar from "@/components/shared/Navbar";
-import DashboardFilters from "@/components/dashboard/DashboardFilters";
-import { MetricCard } from "@/components/arc/metric-card/metric-card";
-import { EmptyState } from "@/components/arc/empty-state/empty-state";
-import { PRIMARY_LINK_CLASS } from "@/components/shared/linkButton";
-import type { SubmissionWithUser } from "@/types";
-
-// Vote state attached on the server and read by SubmissionCard, which passes it
-// to VoteButton as initial values so no card fetches its summary on mount.
-type SubmissionWithVotes = SubmissionWithUser & {
-  voteCount: number;
-  hasVoted: boolean;
-};
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardMetricsSection from "@/components/dashboard/DashboardMetricsSection";
+import DashboardSubmissionsSection from "@/components/dashboard/DashboardSubmissionsSection";
+import type { DashboardSummary } from "@/hooks/use-dashboard-data";
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/auth/signin");
 
-  const submissions = await listSubmissions({ userId: session.user.id });
+  const userId = session.user.id;
+  const isAdmin = session.user.role === "admin";
+  const scope = isAdmin ? {} : { userId };
 
-  // One batched pair of vote queries per page load. Counting inside each card
-  // would fire a GET /api/submissions/[id]/vote request per feature row, and
-  // only features render a vote button, so only their ids are queried.
-  const featureIds = submissions
-    .filter((s) => s.type === "FEATURE")
-    .map((s) => s.id);
-
-  const [voteCounts, votedIds] = await Promise.all([
-    countVotesBySubmission(featureIds),
-    listVotedSubmissionIds(featureIds, session.user.id),
+  const [total, open, bugs, features, submissions, unread] = await Promise.all([
+    countSubmissions(scope),
+    countSubmissions({
+      ...scope,
+      status: ["OPEN", "IN_PROGRESS", "REVIEW"],
+    }),
+    countSubmissions({ ...scope, type: "BUG" }),
+    countSubmissions({ ...scope, type: "FEATURE" }),
+    listSubmissions({ ...scope, lean: true }),
+    countUnreadNotifications(userId),
   ]);
 
-  const submissionsWithVotes = submissions.map((submission) => ({
-    ...submission,
-    voteCount: voteCounts.get(submission.id) ?? 0,
-    hasVoted: votedIds.has(submission.id),
-  })) as SubmissionWithVotes[];
+  const featureIds = submissions
+    .filter((row) => row.type === "FEATURE")
+    .map((row) => row.id);
 
-  const bugs = submissions.filter((s) => s.type === "BUG").length;
-  const features = submissions.filter((s) => s.type === "FEATURE").length;
-  const stillOpen = submissions.filter(
-    (s) => s.status === "OPEN" || s.status === "IN_PROGRESS" || s.status === "REVIEW",
-  ).length;
+  const [counts, votedIds] = await Promise.all([
+    countVotesBySubmission(featureIds),
+    listVotedSubmissionIds(featureIds, userId),
+  ]);
 
+  const summary: DashboardSummary = {
+    total,
+    open,
+    bugs,
+    features,
+    submissions: submissions as DashboardSummary["submissions"],
+    totalRows: total,
+    votes: {
+      counts: Object.fromEntries(counts),
+      votedIds: Array.from(votedIds),
+    },
+  };
+
+  const queryClient = getQueryClient();
+  queryClient.setQueryData(queryKeys.dashboard.summary, summary);
+  queryClient.setQueryData(queryKeys.dashboard.submissions, summary.submissions);
+  // votedIds array only — Set is not JSON-safe across dehydrate.
+  queryClient.setQueryData(queryKeys.dashboard.votes, {
+    counts: summary.votes.counts,
+    votedIds: summary.votes.votedIds,
+  });
+  queryClient.setQueryData(queryKeys.notifications.unread, unread);
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="mx-auto max-w-7xl px-3 py-6 sm:px-5">
-        <div className="mb-5">
-          <h1 className="mb-1 font-display text-2xl font-500 text-foreground">
-            My submissions
-          </h1>
-          <p className="text-sm text-muted">
-            Welcome back, {session.user.name?.split(" ")[0]}
-          </p>
-        </div>
-
-        {/*
-          Reporting is the thing this page exists to lead people to, so it sits
-          above the numbers rather than beside the title, where it competes with
-          them for attention and is easy to miss on a phone. It is the one
-          primary action on this surface; the empty state below deliberately has
-          no action of its own so the two do not double up.
-        */}
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-panel border border-border bg-surface px-4 py-3">
-          <p className="text-sm text-secondary">
-            Found a bug, or have an idea worth building?
-          </p>
-          <Link href="/submit" className={PRIMARY_LINK_CLASS}>
-            <Plus size={15} aria-hidden />
-            Report an issue
-          </Link>
-        </div>
-
-        <div className="mb-5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <MetricCard
-            label="Total"
-            value={submissions.length}
-            context={`${stillOpen} still in progress`}
-          />
-          <MetricCard label="Bug reports" value={bugs} context="Reported by you" />
-          <MetricCard
-            label="Feature requests"
-            value={features}
-            context="Reported by you"
-          />
-        </div>
-
-        {submissions.length === 0 ? (
-          <div className="rounded-panel border border-border bg-surface">
-            <EmptyState
-              className="py-14"
-              icon={<Inbox size={22} aria-hidden />}
-              title="No submissions yet"
-              description="Anything you report will show up here, with its status and who is looking at it."
-            />
-          </div>
-        ) : (
-          <DashboardFilters submissions={submissionsWithVotes} />
-        )}
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6">
+        <HydrationBoundary state={dehydrate(queryClient)}>
+          <DashboardHeader />
+          <DashboardMetricsSection />
+          <DashboardSubmissionsSection />
+        </HydrationBoundary>
       </main>
     </div>
   );
