@@ -1,16 +1,34 @@
 "use client";
 
-import { useState } from "react";
-import { MessageSquare, Send, Trash2 } from "lucide-react";
-import { cn, formatDate } from "@/lib/utils";
+import { MessageSquare } from "lucide-react";
 import toast from "react-hot-toast";
+import {
+  CommentThread,
+  type CommentAuthor,
+  type ThreadComment,
+} from "@/components/arc/comment-thread/comment-thread";
+import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import {
   useComments,
   useCreateComment,
   useDeleteComment,
-  type CommentWithUser as Comment,
 } from "@/hooks/use-comments";
 
+/* Matches no author id, so no comment is treated as the viewer's own. */
+const NO_CURRENT_USER = "__none__";
+
+/**
+ * Discussion on a submission.
+ *
+ * Arc's `comment-thread` owns the composer, the nesting, and the empty state,
+ * and reports exactly what changed through a typed event, so this file maps
+ * those events onto the existing mutations rather than diffing a tree.
+ *
+ * Two of its affordances stay off. TrackIt's comment rows are flat and the
+ * database has no parent column, so replies attach at depth 1 and are stored as
+ * ordinary comments. Reactions are left unpassed, so no picker is offered rather
+ * than offering one that has nowhere to save.
+ */
 export default function CommentsSection({
   submissionId,
   currentUserId,
@@ -25,145 +43,101 @@ export default function CommentsSection({
   const removeComment = useDeleteComment(submissionId);
 
   const comments = commentsQuery.data;
-  const [body, setBody] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  if (comments === undefined) {
+    return (
+      <section className="rounded-panel border border-border bg-surface p-6">
+        <h2 className="mb-4 flex items-center gap-2 font-display text-sm font-500 text-secondary">
+          <MessageSquare size={13} aria-hidden />
+          Comments
+        </h2>
+        <div aria-busy="true">
+          <Skeleton lines={4} />
+        </div>
+      </section>
+    );
+  }
 
-    const text = body.trim();
-    if (!text) {
-      toast.error("Write something before posting");
+  const people = comments.map((comment) => ({
+    id: comment.userId,
+    name: comment.user.name ?? comment.user.email,
+    avatar: comment.user.image ?? undefined,
+  }));
+
+  /*
+   * The thread needs a `currentUser` to decide which comments it offers edit and
+   * delete on. When the page has no id for the viewer, an id that matches no
+   * author is passed: the thread then offers no actions on any comment, which is
+   * the read-only view, rather than offering edits the API would reject.
+   */
+  const own = currentUserId
+    ? comments.find((comment) => comment.userId === currentUserId)
+    : undefined;
+
+  const currentUser: CommentAuthor = {
+    id: currentUserId ?? NO_CURRENT_USER,
+    name: own?.user.name ?? "You",
+    avatar: own?.user.image ?? undefined,
+  };
+
+  const threadComments: ThreadComment[] = comments.map((comment) => ({
+    id: comment.id,
+    author: {
+      id: comment.userId,
+      name: comment.user.name ?? comment.user.email,
+      avatar: comment.user.image ?? undefined,
+    },
+    body: comment.body,
+    createdAt: new Date(comment.createdAt).toISOString(),
+  }));
+
+  function handleChange(next: ThreadComment[], event: Parameters<NonNullable<React.ComponentProps<typeof CommentThread>["onCommentsChange"]>>[1]) {
+    if (event.type === "reply") {
+      postComment.mutate(event.comment.body, {
+        onError: (error) => toast.error(error.message ?? "Could not post the comment"),
+      });
       return;
     }
 
-    postComment.mutate(text, {
-      onSuccess: () => {
-        setBody("");
-        toast.success("Comment posted");
-      },
-      onError: (error) => toast.error(error.message ?? "Could not post comment"),
-    });
-  };
+    if (event.type === "delete") {
+      removeComment.mutate(event.id, {
+        onSuccess: () => toast.success("Comment deleted"),
+        onError: (error) => toast.error(error.message ?? "Could not delete the comment"),
+      });
+      return;
+    }
 
-  const handleDelete = (commentId: string) => {
-    setDeletingId(commentId);
-    removeComment.mutate(commentId, {
-      onSuccess: () => toast.success("Comment deleted"),
-      onError: (error) => toast.error(error.message ?? "Could not delete comment"),
-      onSettled: () => setDeletingId(null),
-    });
-  };
-
-  const canPost = body.trim().length > 0 && !postComment.isPending;
+    if (event.type === "edit") {
+      /* Editing is not supported by the API. The thread still offers it, so the
+         change is refused here rather than silently lost in the cache. */
+      toast.error("Comments cannot be edited once posted");
+    }
+  }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-      <h2 className="font-display text-sm font-600 text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-        <MessageSquare size={13} />
-        Comments
-        {comments && comments.length > 0 && (
-          <span className="text-zinc-600 font-500 normal-case tracking-normal">
-            ({comments.length})
+    <section className="rounded-panel border border-border bg-surface p-6">
+      <CommentThread
+        title={
+          <span className="flex items-center gap-2">
+            <MessageSquare size={13} aria-hidden />
+            Comments
           </span>
-        )}
-      </h2>
+        }
+        comments={threadComments}
+        people={people}
+        currentUser={currentUser}
+        placeholder="Add a comment"
+        /* TrackIt has no parent column, so a reply is stored as a plain comment
+           rather than a nested one. */
+        maxDepth={1}
+        onCommentsChange={handleChange}
+      />
 
-      {/* Composer */}
-      <form onSubmit={handleSubmit} className="mb-6">
-        <label htmlFor="comment-body" className="sr-only">
-          Add a comment
-        </label>
-        <textarea
-          id="comment-body"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={3}
-          placeholder="Add a comment…"
-          maxLength={5000}
-          className="w-full bg-zinc-950 border border-zinc-800 focus:border-indigo-500/60 rounded-xl px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition-colors resize-y min-h-[72px]"
-        />
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-xs text-zinc-600">{body.trim().length}/5000</span>
-          <button
-            type="submit"
-            disabled={!canPost}
-            className={cn(
-              "inline-flex items-center gap-1.5 min-h-9 px-4 rounded-lg text-sm font-500 transition-colors",
-              canPost
-                ? "bg-indigo-500 hover:bg-indigo-600 text-white cursor-pointer"
-                : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
-            )}
-          >
-            <Send size={13} />
-            {postComment.isPending ? "Posting…" : "Post comment"}
-          </button>
-        </div>
-      </form>
-
-      {/* List */}
-      {comments === undefined ? (
-        <div className="space-y-4 animate-pulse">
-          {[0, 1].map((i) => (
-            <div key={i} className="flex gap-3">
-              <div className="w-7 h-7 rounded-full bg-zinc-800 shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="h-3 w-28 bg-zinc-800 rounded" />
-                <div className="h-3 w-full bg-zinc-800 rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : comments.length === 0 ? (
-        <p className="text-sm text-zinc-600">No comments yet. Start the conversation.</p>
-      ) : (
-        <ul className="space-y-4">
-          {comments.map((comment) => (
-            <li key={comment.id} className="flex gap-3">
-              {comment.user.image ? (
-                <img
-                  src={comment.user.image}
-                  alt={comment.user.name ?? "Commenter"}
-                  className="w-7 h-7 rounded-full shrink-0"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-xs text-white font-600 shrink-0">
-                  {comment.user.name?.[0] ?? comment.user.email[0]?.toUpperCase()}
-                </div>
-              )}
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-500 text-zinc-300 truncate">
-                    {comment.user.name ?? comment.user.email}
-                  </span>
-                  <span className="text-xs text-zinc-600">{formatDate(comment.createdAt)}</span>
-
-                  {/* Author or admin only — mirrors the API's delete rule. */}
-                  {(comment.userId === currentUserId || isAdmin) && (
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(comment.id)}
-                      disabled={deletingId === comment.id}
-                      aria-label={`Delete comment by ${comment.user.name ?? comment.user.email}`}
-                      className="ml-auto p-1 text-zinc-600 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {deletingId === comment.id ? (
-                        <span className="block w-3 h-3 border border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
-                      ) : (
-                        <Trash2 size={13} />
-                      )}
-                    </button>
-                  )}
-                </div>
-                <p className="text-sm text-zinc-300 whitespace-pre-wrap break-words mt-0.5">
-                  {comment.body}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
+      {isAdmin && (
+        <p className="mt-3 text-xs text-muted">
+          As an admin you can delete any comment on this submission.
+        </p>
       )}
-    </div>
+    </section>
   );
 }

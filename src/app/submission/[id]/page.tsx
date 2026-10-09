@@ -30,23 +30,23 @@ export default async function SubmissionDetailPage({
   if (!isAdmin && !isOwner) redirect("/dashboard");
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-6"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors mb-6"
         >
           <ChevronLeft size={15} />
           Back to dashboard
         </Link>
 
-        <div className="animate-fade-up">
+        <div className="">
           {/* Header */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-4">
+          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6 mb-4">
             <div className="flex items-start justify-between gap-4 mb-4">
-              <h1 className="font-display text-xl font-700 text-white leading-snug flex-1">
+              <h1 className="font-display text-xl font-500 text-foreground leading-snug flex-1">
                 {submission.title}
               </h1>
               <div className="flex items-center gap-2 shrink-0">
@@ -62,7 +62,7 @@ export default async function SubmissionDetailPage({
               <PriorityBadge priority={submission.priority} />
             </div>
 
-            <div className="flex items-center gap-3 pt-4 border-t border-zinc-800">
+            <div className="flex items-center gap-3 pt-4 border-t border-[var(--border-subtle)]">
               {submission.user.image ? (
                 <img
                   src={submission.user.image}
@@ -70,32 +70,32 @@ export default async function SubmissionDetailPage({
                   className="w-7 h-7 rounded-full"
                 />
               ) : (
-                <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-xs text-white font-600">
+                <div className="w-7 h-7 rounded-full bg-accent text-accent-foreground font-500">
                   {submission.user.name?.[0]}
                 </div>
               )}
               <div>
-                <p className="text-xs font-500 text-zinc-300">{submission.user.name}</p>
-                <p className="text-xs text-zinc-600">{formatDate(submission.createdAt)}</p>
+                <p className="text-xs font-500 text-secondary">{submission.user.name}</p>
+                <p className="text-xs text-muted">{formatDate(submission.createdAt)}</p>
               </div>
             </div>
           </div>
 
           {/* Description */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-4">
-            <h2 className="font-display text-sm font-600 text-zinc-400 uppercase tracking-wider mb-4">
+          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6 mb-4">
+            <h2 className="font-display text-sm font-500 text-secondary mb-4">
               Description
             </h2>
             <div
-              className="prose-dark text-sm text-zinc-300"
+              className="prose-dark text-sm text-secondary"
               dangerouslySetInnerHTML={{ __html: submission.description }}
             />
           </div>
 
           {/* Attachments */}
           {submission.attachments.length > 0 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-4">
-              <h2 className="font-display text-sm font-600 text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6 mb-4">
+              <h2 className="font-display text-sm font-500 text-secondary mb-4 flex items-center gap-2">
                 <Paperclip size={13} />
                 Attachments ({submission.attachments.length})
               </h2>

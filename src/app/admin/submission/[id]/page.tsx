@@ -35,23 +35,23 @@ export default async function AdminSubmissionDetailPage({
   if (!submission) notFound();
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <Link
           href="/admin"
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-6"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors mb-6"
         >
           <ChevronLeft size={15} />
           Back to admin
         </Link>
 
-        <div className="animate-fade-up space-y-4">
+        <div className=" space-y-4">
           {/* Header card */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6">
             <div className="flex items-start justify-between gap-4 mb-4">
-              <h1 className="font-display text-xl font-700 text-white leading-snug flex-1">
+              <h1 className="font-display text-xl font-500 text-foreground leading-snug flex-1">
                 {submission.title}
               </h1>
               <StatusBadge status={submission.status} />
@@ -63,7 +63,7 @@ export default async function AdminSubmissionDetailPage({
             </div>
 
             {/* Reporter info */}
-            <div className="flex items-center gap-3 py-4 border-t border-b border-zinc-800 mb-4">
+            <div className="flex items-center gap-3 py-4 border-t border-b border-[var(--border-subtle)] mb-4">
               {submission.user.image ? (
                 <img
                   src={submission.user.image}
@@ -71,15 +71,15 @@ export default async function AdminSubmissionDetailPage({
                   className="w-8 h-8 rounded-full"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-sm text-white font-600">
+                <div className="w-8 h-8 rounded-full bg-accent text-accent-foreground font-500">
                   {submission.user.name?.[0]}
                 </div>
               )}
               <div>
-                <p className="text-sm font-500 text-zinc-200">{submission.user.name}</p>
-                <p className="text-xs text-zinc-500">{submission.user.email}</p>
+                <p className="text-sm font-500 text-foreground">{submission.user.name}</p>
+                <p className="text-xs text-muted">{submission.user.email}</p>
               </div>
-              <div className="ml-auto flex items-center gap-1.5 text-xs text-zinc-600">
+              <div className="ml-auto flex items-center gap-1.5 text-xs text-muted">
                 <Calendar size={12} />
                 {formatDate(submission.createdAt)}
               </div>
@@ -89,8 +89,8 @@ export default async function AdminSubmissionDetailPage({
             {(submission.dueDate || submission.resolvedAt) && (
               <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                 {submission.dueDate && (
-                  <span className="flex items-center gap-1.5 text-zinc-400">
-                    <CalendarClock size={12} className="text-zinc-600" />
+                  <span className="flex items-center gap-1.5 text-secondary">
+                    <CalendarClock size={12} className="text-muted" />
                     Due {formatDate(submission.dueDate)}
                   </span>
                 )}
@@ -108,12 +108,12 @@ export default async function AdminSubmissionDetailPage({
           </div>
 
           {/* Description */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-            <h2 className="font-display text-sm font-600 text-zinc-400 uppercase tracking-wider mb-4">
+          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6">
+            <h2 className="font-display text-sm font-500 text-secondary mb-4">
               Description
             </h2>
             <div
-              className="prose-dark text-sm text-zinc-300"
+              className="prose-dark text-sm text-secondary"
               dangerouslySetInnerHTML={{ __html: submission.description }}
             />
           </div>
@@ -122,8 +122,8 @@ export default async function AdminSubmissionDetailPage({
 
           {/* Attachments */}
           {submission.attachments.length > 0 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-              <h2 className="font-display text-sm font-600 text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6">
+              <h2 className="font-display text-sm font-500 text-secondary mb-4 flex items-center gap-2">
                 <Paperclip size={13} />
                 Attachments ({submission.attachments.length})
               </h2>
@@ -139,9 +139,9 @@ export default async function AdminSubmissionDetailPage({
                       href={att.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg px-3 py-2.5 transition-all group"
+                      className="flex items-center gap-3 bg-surface-muted hover:bg-surface-raised border border-border rounded-control px-3 py-2.5 transition-all group"
                     >
-                      <div className="w-8 h-8 bg-zinc-700 rounded-md flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 bg-surface-raised rounded-md flex items-center justify-center shrink-0">
                         {isImage ? (
                           <ImageIcon size={15} className="text-blue-400" />
                         ) : isPDF ? (
@@ -149,14 +149,14 @@ export default async function AdminSubmissionDetailPage({
                         ) : isVideo ? (
                           <Film size={15} className="text-violet-400" />
                         ) : (
-                          <FileText size={15} className="text-zinc-400" />
+                          <FileText size={15} className="text-secondary" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-zinc-200 truncate">{att.fileName}</p>
-                        <p className="text-xs text-zinc-500">{formatBytes(att.fileSize)}</p>
+                        <p className="text-sm text-foreground truncate">{att.fileName}</p>
+                        <p className="text-xs text-muted">{formatBytes(att.fileSize)}</p>
                       </div>
-                      <Download size={13} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" />
+                      <Download size={13} className="text-muted group-hover:text-secondary transition-colors" />
                     </a>
                   );
                 })}
