@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { getQueryClient, queryKeys } from "@/lib/query-client";
 import { getPreferences } from "@/db/preferences";
 import { getUserById } from "@/db/users";
 import Navbar from "@/components/shared/Navbar";
@@ -26,6 +28,17 @@ export default async function SettingsPage() {
   };
 
   const isAdmin = profile.role === "admin";
+
+  // The server already holds the preferences row, so seed the client cache
+  // with it. ThemeProvider's useThemePreferences then reads fresh data on
+  // mount instead of refetching GET /api/user/preferences (which would
+  // re-validate the session and re-run the same query).
+  const queryClient = getQueryClient();
+  queryClient.setQueryData(queryKeys.preferences, {
+    theme: preferences.theme,
+    accent: preferences.accent,
+    inAppNotifications: preferences.inAppNotifications,
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,9 +97,9 @@ export default async function SettingsPage() {
           </div>
 
           {/* Preferences */}
-          <div className="">
+          <HydrationBoundary state={dehydrate(queryClient)}>
             <PreferencesForm initial={preferences} />
-          </div>
+          </HydrationBoundary>
         </div>
       </main>
     </div>
