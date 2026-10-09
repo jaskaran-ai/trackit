@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BrandLogo from "@/components/shared/BrandLogo";
-import { NAV_LINK_CLASS, PRIMARY_LINK_CLASS } from "@/components/shared/linkButton";
+import {
+  NAV_LINK_CLASS,
+  PRIMARY_ICON_LINK_CLASS,
+} from "@/components/shared/linkButton";
 import NotificationBell from "@/components/layout/NotificationBell";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { useTheme } from "@/components/theme/ThemeProvider";
@@ -79,12 +82,16 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* The one primary action on this surface. A link, not a button: it
-              navigates, and Arc's Button renders a real <button>. */}
-          <Link href="/submit" className={PRIMARY_LINK_CLASS}>
+          {/* The one primary action on this surface, on every page. A link, not
+              a button: it navigates, and Arc's Button renders a real <button>.
+
+              The label is spelled out from `sm` up because "New" did not say
+              what it did. Below that it collapses to the icon: the logo, this,
+              and the account menu together do not fit 320px with any text. */}
+          <Link href="/submit" className={PRIMARY_ICON_LINK_CLASS}>
             <Plus size={14} aria-hidden />
-            <span className="hidden sm:inline">New</span>
-            <span className="sr-only sm:hidden">New submission</span>
+            <span className="hidden sm:inline">Report an issue</span>
+            <span className="sr-only sm:hidden">Report an issue</span>
           </Link>
 
           {/* Below `sm` the account menu becomes a bottom sheet and carries the

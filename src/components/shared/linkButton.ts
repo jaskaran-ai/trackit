@@ -20,6 +20,12 @@ const BASE =
 
 export const PRIMARY_LINK_CLASS = `${BASE} min-h-[var(--control-height-sm)] bg-foreground px-3 text-background hover:opacity-90`;
 
+/*
+ * The navbar collapses the primary action to its icon below `sm`, so it needs a
+ * square-ish target there rather than the padding of a text label.
+ */
+export const PRIMARY_ICON_LINK_CLASS = `${PRIMARY_LINK_CLASS} max-sm:w-11 max-sm:px-0`;
+
 /* Secondary is the outlined variant, for links beside a primary action. */
 export const SECONDARY_LINK_CLASS = `${BASE} min-h-[var(--control-height-sm)] border-border bg-surface px-3 text-foreground hover:bg-surface-muted`;
 

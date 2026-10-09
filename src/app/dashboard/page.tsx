@@ -53,24 +53,34 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="mb-1 font-display text-2xl font-500 text-foreground">
-              My submissions
-            </h1>
-            <p className="text-sm text-muted">
-              Welcome back, {session.user.name?.split(" ")[0]}
-            </p>
-          </div>
+      <main className="mx-auto max-w-7xl px-3 py-6 sm:px-5">
+        <div className="mb-5">
+          <h1 className="mb-1 font-display text-2xl font-500 text-foreground">
+            My submissions
+          </h1>
+          <p className="text-sm text-muted">
+            Welcome back, {session.user.name?.split(" ")[0]}
+          </p>
+        </div>
 
+        {/*
+          Reporting is the thing this page exists to lead people to, so it sits
+          above the numbers rather than beside the title, where it competes with
+          them for attention and is easy to miss on a phone. It is the one
+          primary action on this surface; the empty state below deliberately has
+          no action of its own so the two do not double up.
+        */}
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-panel border border-border bg-surface px-4 py-3">
+          <p className="text-sm text-secondary">
+            Found a bug, or have an idea worth building?
+          </p>
           <Link href="/submit" className={PRIMARY_LINK_CLASS}>
             <Plus size={15} aria-hidden />
-            New submission
+            Report an issue
           </Link>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mb-5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
           <MetricCard
             label="Total"
             value={submissions.length}
@@ -87,16 +97,10 @@ export default async function DashboardPage() {
         {submissions.length === 0 ? (
           <div className="rounded-panel border border-border bg-surface">
             <EmptyState
-              className="py-20"
+              className="py-14"
               icon={<Inbox size={22} aria-hidden />}
               title="No submissions yet"
-              description="Found a bug or have a feature idea? Let the team know."
-              action={
-                <Link href="/submit" className={PRIMARY_LINK_CLASS}>
-                  <Plus size={15} aria-hidden />
-                  Create your first submission
-                </Link>
-              }
+              description="Anything you report will show up here, with its status and who is looking at it."
             />
           </div>
         ) : (
