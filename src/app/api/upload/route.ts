@@ -4,18 +4,19 @@ import { headers } from "next/headers";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import {
+  ACCEPTED_FILE_TYPES,
+  MAX_FILES,
+  MAX_FILE_SIZE,
+} from "@/lib/utils";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-const ALLOWED_MIME_TYPES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "application/pdf",
-  "text/plain",
-  "video/mp4",
-]);
+/*
+ * The limits and the accepted types come from the shared constants the dropzone
+ * reads, so a file type added to the picker cannot be rejected here. They used
+ * to be written out again in this file, which is how a client's "12MB allowed"
+ * promise and the server's 10MB ceiling drifted apart.
+ */
+const ALLOWED_MIME_TYPES = new Set(Object.keys(ACCEPTED_FILE_TYPES));
 
 export async function POST(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -26,6 +27,12 @@ export async function POST(req: NextRequest) {
 
   if (!files || files.length === 0) {
     return NextResponse.json({ error: "No files provided" }, { status: 400 });
+  }
+  if (files.length > MAX_FILES) {
+    return NextResponse.json(
+      { error: `At most ${MAX_FILES} files per submission` },
+      { status: 400 },
+    );
   }
 
   if (files.length > 5) {
