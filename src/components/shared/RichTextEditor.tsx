@@ -1,138 +1,38 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Placeholder from "@tiptap/extension-placeholder";
-import CodeBlockExtension from "@tiptap/extension-code-block";
-import {
-  Bold,
-  Italic,
-  UnderlineIcon,
-  Code,
-  List,
-  ListOrdered,
-  Code2,
-  Heading2,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { RichTextEditor as ArcRichTextEditor } from "@/components/arc/rich-text-editor/rich-text-editor";
 
-interface RichTextEditorProps {
+/**
+ * Thin wrapper over Arc's rich text editor.
+ *
+ * The contract is unchanged (`value` is HTML in, `onChange` reports HTML out),
+ * which is what the submission description column stores and what the detail
+ * view renders, so no data or query changed with this swap.
+ *
+ * One capability was given up: underline. Arc's editor blocks Cmd/Ctrl+U and
+ * does not emit `<u>`. It covers everything else this form used, bold, italic,
+ * inline code, code blocks, headings, and both list kinds, and adds a floating
+ * selection toolbar and a slash menu. If underline comes back as a
+ * requirement, the editor has to go back to Tiptap rather than be patched.
+ */
+export default function RichTextEditor({
+  value,
+  onChange,
+  placeholder = "Describe the issue in detail",
+  className,
+}: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-}
-
-export default function RichTextEditor({
-  value,
-  onChange,
-  placeholder = "Describe the issue in detail…",
-  className,
-}: RichTextEditorProps) {
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ codeBlock: false }),
-      Underline,
-      CodeBlockExtension,
-      Placeholder.configure({ placeholder }),
-    ],
-    immediatelyRender: false,
-    content: value,
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
-    },
-    editorProps: {
-      attributes: {
-        class: "tiptap-editor text-sm text-zinc-200",
-      },
-    },
-  });
-
-  if (!editor) return null;
-
-  const toolbarButtons = [
-    {
-      action: () => editor.chain().focus().toggleBold().run(),
-      active: editor.isActive("bold"),
-      icon: Bold,
-      label: "Bold",
-    },
-    {
-      action: () => editor.chain().focus().toggleItalic().run(),
-      active: editor.isActive("italic"),
-      icon: Italic,
-      label: "Italic",
-    },
-    {
-      action: () => editor.chain().focus().toggleUnderline().run(),
-      active: editor.isActive("underline"),
-      icon: UnderlineIcon,
-      label: "Underline",
-    },
-    {
-      action: () => editor.chain().focus().toggleCode().run(),
-      active: editor.isActive("code"),
-      icon: Code,
-      label: "Inline code",
-    },
-    {
-      action: () => editor.chain().focus().toggleCodeBlock().run(),
-      active: editor.isActive("codeBlock"),
-      icon: Code2,
-      label: "Code block",
-    },
-    {
-      action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
-      active: editor.isActive("heading", { level: 2 }),
-      icon: Heading2,
-      label: "Heading",
-    },
-    {
-      action: () => editor.chain().focus().toggleBulletList().run(),
-      active: editor.isActive("bulletList"),
-      icon: List,
-      label: "Bullet list",
-    },
-    {
-      action: () => editor.chain().focus().toggleOrderedList().run(),
-      active: editor.isActive("orderedList"),
-      icon: ListOrdered,
-      label: "Ordered list",
-    },
-  ];
-
+}) {
   return (
-    <div
-      className={cn(
-        "bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden focus-within:border-indigo-500/60 transition-colors",
-        className
-      )}
-    >
-      {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-zinc-800 flex-wrap">
-        {toolbarButtons.map(({ action, active, icon: Icon, label }) => (
-          <button
-            key={label}
-            type="button"
-            onClick={action}
-            title={label}
-            className={cn(
-              "p-1.5 rounded-md transition-colors cursor-pointer",
-              active
-                ? "bg-indigo-500/20 text-indigo-400"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
-            )}
-          >
-            <Icon size={14} />
-          </button>
-        ))}
-      </div>
-
-      {/* Editor */}
-      <div className="px-4 py-3">
-        <EditorContent editor={editor} />
-      </div>
-    </div>
+    <ArcRichTextEditor
+      className={className}
+      aria-label="Description"
+      placeholder={placeholder}
+      value={value}
+      onChange={(next) => onChange(next.html)}
+    />
   );
 }

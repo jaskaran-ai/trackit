@@ -2,28 +2,26 @@
 
 import { useSession, signOut } from "@/lib/auth-client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  Bug,
-  Plus,
-  LayoutDashboard,
-  ShieldCheck,
-  LogOut,
-  ChevronDown,
-  Settings,
   Bell,
+  LayoutDashboard,
+  Plus,
+  Settings,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BrandLogo from "@/components/shared/BrandLogo";
+import { NAV_LINK_CLASS, PRIMARY_LINK_CLASS } from "@/components/shared/linkButton";
 import NotificationBell from "@/components/layout/NotificationBell";
-import ThemeToggle, { ThemeSegmentedControl } from "@/components/theme/ThemeToggle";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 import { useTheme } from "@/components/theme/ThemeProvider";
-import { useState } from "react";
+import { UserMenu } from "@/components/arc/user-menu/user-menu";
 
 export default function Navbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const isAdmin = session?.user?.role === "admin";
 
@@ -32,142 +30,93 @@ export default function Navbar() {
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
   ];
 
+  /* Menu entries navigate rather than render links, because UserMenu's items are
+     buttons. The router push keeps this a client transition, so the menu does
+     not do a full page load on the way to a route it could have prefetched. */
+  const menuItems = [
+    ...navLinks.map(({ href, label, icon: Icon }) => ({
+      label,
+      icon: <Icon size={14} strokeWidth={1.75} aria-hidden />,
+      onSelect: () => router.push(href),
+    })),
+    {
+      label: "Notifications",
+      icon: <Bell size={14} strokeWidth={1.75} aria-hidden />,
+      onSelect: () => router.push("/notifications"),
+    },
+    {
+      label: "Settings",
+      icon: <Settings size={14} strokeWidth={1.75} aria-hidden />,
+      onSelect: () => router.push("/settings"),
+    },
+  ];
+
   return (
-    <nav className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/60">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-        {/* Logo */}
-        <Link href="/dashboard" className="flex items-center shrink-0">
+    <nav className="sticky top-0 z-50 border-b border-[var(--border-subtle)] bg-[color-mix(in_oklab,var(--background)_88%,transparent)] backdrop-blur-md">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+        <Link href="/dashboard" className="flex shrink-0 items-center">
           <BrandLogo className="h-7 sm:h-8" />
         </Link>
 
-        {/* Nav links */}
-        <div className="hidden sm:flex items-center gap-1">
-          {navLinks.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-400 transition-colors",
-                pathname === href || pathname.startsWith(href + "/")
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
-              )}
-            >
-              <Icon size={14} />
-              {label}
-            </Link>
-          ))}
+        <div className="hidden items-center gap-1 sm:flex">
+          {navLinks.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  NAV_LINK_CLASS,
+                  active && "bg-surface-raised text-foreground",
+                )}
+              >
+                <Icon size={14} aria-hidden />
+                {label}
+              </Link>
+            );
+          })}
         </div>
 
-        {/* Right side */}
         <div className="flex items-center gap-2">
-          <Link
-            href="/submit"
-            className="flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-500 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Plus size={14} />
-            <span className="hidden sm:block">New</span>
+          {/* The one primary action on this surface. A link, not a button: it
+              navigates, and Arc's Button renders a real <button>. */}
+          <Link href="/submit" className={PRIMARY_LINK_CLASS}>
+            <Plus size={14} aria-hidden />
+            <span className="hidden sm:inline">New</span>
+            <span className="sr-only sm:hidden">New submission</span>
           </Link>
 
-          {/* Notifications and theme. The cluster has to survive 320px, so
-              both collapse into the user menu below `sm`. */}
-          <div className="hidden sm:flex items-center gap-1">
+          {/* Below `sm` the account menu becomes a bottom sheet and carries the
+              navigation, notifications, and theme, so the bar keeps one row. */}
+          <div className="hidden items-center gap-1 sm:flex">
             <NotificationBell />
             <ThemeToggle />
           </div>
 
-          {/* User menu */}
           {session?.user && (
-            <div className="relative">
-              <button
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-expanded={menuOpen}
-                aria-label="User menu"
-                className="flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
-              >
-                {session.user.image ? (
-                  <img
-                    src={session.user.image}
-                    alt={session.user.name}
-                    className="w-6 h-6 rounded-full"
-                  />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs text-white font-600">
-                    {session.user.name?.[0]}
-                  </div>
-                )}
-                <ChevronDown size={12} className="text-zinc-500" />
-              </button>
-
-              {menuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 mt-1 w-52 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-zinc-800">
-                      <p className="text-sm font-500 text-zinc-200 truncate">{session.user.name}</p>
-                      <p className="text-xs text-zinc-500 truncate">{session.user.email}</p>
-                      {isAdmin && (
-                        <span className="inline-flex items-center gap-1 mt-1 text-xs bg-indigo-500/15 text-indigo-400 px-1.5 py-0.5 rounded">
-                          <ShieldCheck size={10} /> Admin
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Mobile nav links */}
-                    <div className="sm:hidden border-b border-zinc-800">
-                      {navLinks.map(({ href, label, icon: Icon }) => (
-                        <Link
-                          key={href}
-                          href={href}
-                          onClick={() => setMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
-                        >
-                          <Icon size={14} /> {label}
-                        </Link>
-                      ))}
-
-                      <Link
-                        href="/notifications"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
-                      >
-                        <Bell size={14} /> Notifications
-                      </Link>
-
-                      {/* Theme switch, mirroring the one in the cluster above */}
-                      <div className="px-3 py-2">
-                        <p className="text-xs text-zinc-500 mb-1.5">Theme</p>
-                        <ThemeSegmentedControl
-                          value={theme}
-                          onChange={setTheme}
-                          className="w-full"
-                        />
-                      </div>
-                    </div>
-
-                    <Link
-                      href="/settings"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
-                    >
-                      <Settings size={14} />
-                      Settings
-                    </Link>
-
-                    <button
-                      onClick={() => signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/auth/signin"; } } })}
-                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-zinc-400 hover:text-red-400 hover:bg-zinc-800 transition-colors cursor-pointer"
-                    >
-                      <LogOut size={14} />
-                      Sign out
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <UserMenu
+              user={{
+                name: session.user.name,
+                email: session.user.email,
+                avatarSrc: session.user.image ?? undefined,
+                ...(isAdmin ? { plan: "Admin" } : {}),
+              }}
+              theme={theme}
+              onThemeChange={setTheme}
+              showTheme
+              items={menuItems}
+              showName={false}
+              onSignOut={() =>
+                signOut({
+                  fetchOptions: {
+                    onSuccess: () => {
+                      window.location.href = "/auth/signin";
+                    },
+                  },
+                })
+              }
+            />
           )}
         </div>
       </div>

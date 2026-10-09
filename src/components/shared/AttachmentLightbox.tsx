@@ -1,31 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, Film, Paperclip, X } from "lucide-react";
-import { cn, formatBytes } from "@/lib/utils";
+import { useCallback, useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Download, Film } from "lucide-react";
+import { formatBytes } from "@/lib/utils";
+import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
+import { Button } from "@/components/arc/button/button";
+import { PRIMARY_LINK_CLASS } from "@/components/shared/linkButton";
 import type { Attachment } from "@/types";
 
-const MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mql = window.matchMedia(MOTION_QUERY);
-    setReduced(mql.matches);
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
-
-  return reduced;
-}
-
 function isVideo(mimeType: string) {
-  return mimeType === "video/mp4" || mimeType.startsWith("video/");
+  return mimeType.startsWith("video/");
 }
 
+/**
+ * Full-size attachment preview.
+ *
+ * Arc's `dialog` supplies the parts this used to reimplement: the overlay, the
+ * focus trap, the focus return, Escape to close, and the page scroll lock. What
+ * it does not supply is stepping between files, so the arrow keys and the two
+ * buttons are added on top.
+ */
 export default function AttachmentLightbox({
   attachments,
   initialIndex = 0,
@@ -35,11 +29,9 @@ export default function AttachmentLightbox({
   initialIndex?: number;
   onClose: () => void;
 }) {
-  const reducedMotion = usePrefersReducedMotion();
   const [index, setIndex] = useState(() =>
-    Math.min(Math.max(initialIndex, 0), Math.max(attachments.length - 1, 0))
+    Math.min(Math.max(initialIndex, 0), Math.max(attachments.length - 1, 0)),
   );
-  const closeRef = useRef<HTMLButtonElement>(null);
 
   const goTo = useCallback(
     (delta: number) => {
@@ -48,40 +40,26 @@ export default function AttachmentLightbox({
         return (prev + delta + attachments.length) % attachments.length;
       });
     },
-    [attachments.length]
+    [attachments.length],
   );
 
+  // Arrow keys step between files. Escape is left to the dialog.
   useEffect(() => {
-    closeRef.current?.focus();
-  }, []);
+    if (attachments.length < 2) return;
 
-  // Escape closes, arrows navigate.
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
         goTo(-1);
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
         goTo(1);
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [goTo, onClose]);
-
-  // Freeze the page behind the overlay.
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
+  }, [attachments.length, goTo]);
 
   if (attachments.length === 0) return null;
 
@@ -89,105 +67,86 @@ export default function AttachmentLightbox({
   const showArrows = attachments.length > 1;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Attachment preview"
-      className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4",
-        !reducedMotion && "animate-fade-up"
-      )}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
       }}
     >
-      {/* Top bar */}
-      <div className="absolute top-0 inset-x-0 flex items-center justify-between gap-3 p-4">
-        <span className="inline-flex items-center gap-1.5 text-xs font-500 text-zinc-400 bg-zinc-900/80 border border-zinc-800 rounded-full px-3 py-1.5">
-          <Paperclip size={11} />
-          {index + 1} / {attachments.length}
-        </span>
-        <button
-          ref={closeRef}
-          type="button"
-          onClick={onClose}
-          aria-label="Close preview"
-          className="flex items-center justify-center w-9 h-9 rounded-full bg-zinc-900/80 border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors cursor-pointer"
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      {/* Prev / next */}
-      {showArrows && (
-        <>
-          <button
-            type="button"
-            onClick={() => goTo(-1)}
-            aria-label="Previous attachment"
-            className="absolute left-3 sm:left-6 flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors cursor-pointer"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            type="button"
-            onClick={() => goTo(1)}
-            aria-label="Next attachment"
-            className="absolute right-3 sm:right-6 flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors cursor-pointer"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </>
-      )}
-
-      {/* Content */}
-      <figure className="flex flex-col items-center gap-3 max-w-full max-h-full">
-        <div
-          className={cn(
-            "flex items-center justify-center",
-            !reducedMotion && "transition-transform duration-200"
+      <DialogContent
+        title={`Attachment ${index + 1} of ${attachments.length}`}
+        description={current.fileName}
+        className="max-w-4xl"
+      >
+        <div className="flex items-center gap-3">
+          {showArrows && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => goTo(-1)}
+              aria-label="Previous attachment"
+            >
+              <ChevronLeft size={15} aria-hidden />
+            </Button>
           )}
-        >
-          {current.mimeType.startsWith("image/") ? (
-            <img
-              src={current.fileUrl}
-              alt={current.fileName}
-              className="max-h-[75vh] max-w-[90vw] rounded-xl border border-zinc-800 object-contain"
-            />
-          ) : isVideo(current.mimeType) ? (
-            <video
-              key={current.id}
-              src={current.fileUrl}
-              controls
-              className="max-h-[75vh] max-w-[90vw] rounded-xl border border-zinc-800 bg-black"
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center max-w-sm">
-              <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center">
-                <Film size={20} className="text-zinc-400" />
+
+          <figure className="flex min-w-0 flex-1 flex-col items-center gap-3">
+            {current.mimeType.startsWith("image/") ? (
+              <img
+                src={current.fileUrl}
+                alt={current.fileName}
+                className="max-h-[70vh] max-w-full rounded-control border border-border object-contain"
+              />
+            ) : isVideo(current.mimeType) ? (
+              <video
+                key={current.id}
+                src={current.fileUrl}
+                controls
+                className="max-h-[70vh] max-w-full rounded-control border border-border bg-black"
+              />
+            ) : (
+              <div className="flex max-w-sm flex-col items-center gap-3 rounded-panel border border-border bg-surface-muted p-8 text-center">
+                <Film size={22} aria-hidden className="text-muted" />
+                <div>
+                  <p className="break-all text-foreground">{current.fileName}</p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {formatBytes(current.fileSize)}
+                  </p>
+                </div>
+                {/* A real link, not a button wrapping one: this downloads and
+                    should open in a new tab like any other download link. */}
+                <a
+                  href={current.fileUrl}
+                  download={current.fileName}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={PRIMARY_LINK_CLASS}
+                >
+                  <Download size={14} aria-hidden />
+                  Download
+                </a>
               </div>
-              <div>
-                <p className="text-sm text-zinc-200 break-all">{current.fileName}</p>
-                <p className="text-xs text-zinc-600 mt-0.5">{formatBytes(current.fileSize)}</p>
-              </div>
-              <a
-                href={current.fileUrl}
-                download={current.fileName}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-500 px-4 py-2 rounded-lg transition-colors cursor-pointer"
-              >
-                <Download size={14} />
-                Download
-              </a>
-            </div>
+            )}
+
+            {showArrows && (
+              <figcaption className="text-xs text-muted">
+                Use the arrow keys to move between attachments
+              </figcaption>
+            )}
+          </figure>
+
+          {showArrows && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => goTo(1)}
+              aria-label="Next attachment"
+            >
+              <ChevronRight size={15} aria-hidden />
+            </Button>
           )}
         </div>
-
-        <figcaption className="text-xs text-zinc-500 text-center max-w-[90vw] truncate">
-          {current.fileName}
-        </figcaption>
-      </figure>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
