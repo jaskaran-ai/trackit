@@ -9,6 +9,18 @@
 @media (hover: hover) and (pointer: fine) { .button:hover { color: var(--foreground); } }
 .button:active, .button[aria-pressed="true"] { color: var(--foreground); }
 .selection { position: absolute; z-index: -1; inset: 0; border: 1px solid var(--border); border-radius: inherit; background: var(--surface); box-shadow: var(--shadow-resting); }
+.selection[data-tone="danger"] { background: color-mix(in oklab, var(--danger) 10%, var(--surface)); border-color: color-mix(in oklab, var(--danger) 26%, var(--border)); }
+.selection[data-tone="info"] { background: var(--accent-subtle); border-color: color-mix(in oklab, var(--accent) 24%, var(--border)); }
+.selection[data-tone="success"] { background: color-mix(in oklab, var(--success) 10%, var(--surface)); border-color: color-mix(in oklab, var(--success) 25%, var(--border)); }
+.selection[data-tone="warning"] { background: color-mix(in oklab, var(--warning) 11%, var(--surface)); border-color: color-mix(in oklab, var(--warning) 27%, var(--border)); }
+.button[data-tone="danger"]:not([aria-pressed="true"]) { color: color-mix(in oklab, var(--danger) 62%, var(--text-muted)); }
+.button[data-tone="info"]:not([aria-pressed="true"]) { color: color-mix(in oklab, var(--accent-strong) 62%, var(--text-muted)); }
+.button[data-tone="danger"][aria-pressed="true"] { color: var(--danger); }
+.button[data-tone="info"][aria-pressed="true"] { color: var(--accent-strong); }
+@media (hover: hover) and (pointer: fine) {
+  .button[data-tone="danger"]:hover { color: var(--danger); }
+  .button[data-tone="info"]:hover { color: var(--accent-strong); }
+}
 .label { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 380px) { .button { padding: 0 10px; } }
 @media (prefers-reduced-motion: reduce) { .button { transition: none; } }
