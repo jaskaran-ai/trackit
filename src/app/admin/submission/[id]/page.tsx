@@ -153,6 +153,8 @@ export default async function AdminSubmissionDetailPage({
             <CommentsSection
               submissionId={submission.id}
               currentUserId={session.user.id}
+              currentUserName={session.user.name}
+              currentUserImage={session.user.image}
               isAdmin
             />
           </HydrationBoundary>

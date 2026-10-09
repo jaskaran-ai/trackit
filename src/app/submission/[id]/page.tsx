@@ -132,6 +132,8 @@ export default async function SubmissionDetailPage({
             <CommentsSection
               submissionId={submission.id}
               currentUserId={session.user.id}
+              currentUserName={session.user.name}
+              currentUserImage={session.user.image}
               isAdmin={isAdmin}
             />
           </div>
