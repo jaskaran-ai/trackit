@@ -18,7 +18,7 @@ const STATUS_TONES: Record<SubmissionStatus, BadgeTone> = {
   CANCELED: "neutral",
 };
 
-const PRIORITY_TONES: Record<Priority, BadgeTone> = {
+export const PRIORITY_TONES: Record<Priority, BadgeTone> = {
   LOW: "neutral",
   MEDIUM: "info",
   HIGH: "warning",
