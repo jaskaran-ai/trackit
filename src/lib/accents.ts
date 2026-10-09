@@ -1,15 +1,21 @@
 /**
  * Accent ids for the design system.
  *
- * Colour values deliberately live in `src/app/globals.css` only. A picker
- * swatch is previewed by scoping `data-accent` on the swatch element itself, so
- * it renders with the real remapped `--color-indigo-*` variables rather than a
+ * The ids are exactly the ones Arc's foundation.css defines on `:root`, which
+ * is what keeps this picker honest: choosing an id selects a whole validated
+ * palette (accent, strong, subtle, accent-foreground, and the selection
+ * control fills), not one hex value. Adding an id here without a matching
+ * block in foundation.css would fall back to Arc's neutral ramp.
+ *
+ * The colour values themselves live in components/arc/foundation.css only. A
+ * picker swatch is previewed by scoping `data-accent` on the swatch element
+ * itself, so it renders with the real remapped variables rather than a
  * duplicated hex. Keeping the palette in one place is what stops the settings
  * UI from drifting away from the app.
  */
 
 export const ACCENT_IDS = [
-  "indigo",
+  "neutral",
   "violet",
   "blue",
   "green",
@@ -17,12 +23,11 @@ export const ACCENT_IDS = [
   "orange",
   "coral",
   "rose",
-  "neutral",
 ] as const;
 
 export type AccentId = (typeof ACCENT_IDS)[number];
 
-export const DEFAULT_ACCENT: AccentId = "indigo";
+export const DEFAULT_ACCENT: AccentId = "neutral";
 
 export function isAccentId(value: unknown): value is AccentId {
   return (
@@ -36,7 +41,7 @@ export function normaliseAccent(value: unknown): AccentId {
 }
 
 export const ACCENT_LABELS: Record<AccentId, string> = {
-  indigo: "Indigo",
+  neutral: "Neutral",
   violet: "Violet",
   blue: "Blue",
   green: "Green",
@@ -44,5 +49,4 @@ export const ACCENT_LABELS: Record<AccentId, string> = {
   orange: "Orange",
   coral: "Coral",
   rose: "Rose",
-  neutral: "Neutral",
 };

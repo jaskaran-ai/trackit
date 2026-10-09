@@ -78,6 +78,10 @@ function applyTheme(resolved: ResolvedTheme) {
   const root = document.documentElement;
   root.classList.remove("light", "dark");
   root.classList.add(resolved);
+  // Arc's foundation.css keys every token off `data-theme`, while the class
+  // above drives the Tailwind `light:` variant and the zinc ramp. Both
+  // attributes are written together so they can never drift apart.
+  root.setAttribute("data-theme", resolved);
 }
 
 /**
