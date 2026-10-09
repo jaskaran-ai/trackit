@@ -10,7 +10,7 @@ import KanbanBoard from "./KanbanBoard";
 import AdminViewToggle from "./AdminViewToggle";
 import StatsCharts, { type AdminStats } from "@/components/admin/StatsCharts";
 import UserManagement from "@/components/admin/UserManagement";
-import { Bug, Sparkles, Users, Inbox } from "lucide-react";
+import { MetricCard } from "@/components/arc/metric-card/metric-card";
 import type { SubmissionWithUser } from "@/types";
 
 // Vote state attached on the server and read by the table and kanban views, so
@@ -48,18 +48,15 @@ export default async function AdminPage() {
     hasVoted: votedIds.has(submission.id),
   })) as SubmissionWithVotes[];
 
+  /* Each card carries its own context line, so no headline number on this page
+     needs the row around it to explain it. */
   const statCards = [
-    { label: "Total", value: stats.total, icon: Inbox, color: "text-white" },
-    { label: "Open", value: stats.open, icon: Inbox, color: "text-blue-400" },
-    {
-      label: "In Progress",
-      value: stats.inProgress,
-      icon: Inbox,
-      color: "text-amber-400",
-    },
-    { label: "Bugs", value: stats.bugs, icon: Bug, color: "text-red-400" },
-    { label: "Features", value: stats.features, icon: Sparkles, color: "text-violet-400" },
-    { label: "Users", value: stats.users, icon: Users, color: "text-emerald-400" },
+    { label: "Total", value: stats.total, context: "All time" },
+    { label: "Open", value: stats.open, context: "Awaiting triage" },
+    { label: "In progress", value: stats.inProgress, context: "Being worked on" },
+    { label: "In review", value: stats.review, context: "Awaiting sign-off" },
+    { label: "Bugs", value: stats.bugs, context: `${stats.features} feature requests` },
+    { label: "Users", value: stats.users, context: `${stats.archived} archived` },
   ];
 
   const chartStats: AdminStats = {
@@ -85,41 +82,39 @@ export default async function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
-        <div className="mb-8 animate-fade-up">
-          <h1 className="font-display text-2xl font-700 text-white mb-1">Admin Dashboard</h1>
-          <p className="text-zinc-500 text-sm">All submissions across all users</p>
+        <div className="mb-8">
+          <h1 className="font-display text-2xl font-500 text-foreground mb-1">Admin Dashboard</h1>
+          <p className="text-muted text-sm">All submissions across all users</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-8 animate-fade-up animate-fade-up-delay-1">
-          {statCards.map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 sm:p-4">
-              <div className={`font-display text-2xl font-700 ${color} mb-0.5`}>{value}</div>
-              <div className="text-xs text-zinc-500 flex items-center gap-1">
-                <Icon size={10} />
-                {label}
-              </div>
-            </div>
+        {/* The KPI row. StatsCharts below carries only the charts: it used to
+            repeat its own row of headline numbers, so this page showed two. */}
+        <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-6">
+          {statCards.map(({ label, value, context }) => (
+            <MetricCard
+              key={label}
+              label={label}
+              value={value}
+              context={context}
+            />
           ))}
         </div>
 
         {/* Charts */}
-        <div className="mb-8 animate-fade-up animate-fade-up-delay-2">
+        <div className="mb-8">
           <StatsCharts stats={chartStats} />
         </div>
 
         {/* View toggle + content */}
-        <div className="animate-fade-up animate-fade-up-delay-2">
-          <AdminViewToggle
-            tableView={<AdminTable submissions={submissionsWithVotes} />}
-            kanbanView={<KanbanBoard submissions={submissionsWithVotes} />}
-          />
-        </div>
+        <AdminViewToggle
+          tableView={<AdminTable submissions={submissionsWithVotes} />}
+          kanbanView={<KanbanBoard submissions={submissionsWithVotes} />}
+        />
 
         {/* User management */}
         <div className="mt-8">
