@@ -9,6 +9,11 @@ import {
   type ReactNode,
 } from "react";
 import { useThemePreferences } from "@/hooks/use-theme-preferences";
+import {
+  DEFAULT_ACCENT,
+  normaliseAccent,
+  type AccentId,
+} from "@/lib/accents";
 
 export type ThemePreference = "dark" | "light" | "system";
 export type ResolvedTheme = "dark" | "light";
@@ -19,12 +24,16 @@ type ThemeContextValue = {
   /** What is actually on the <html> element. */
   resolvedTheme: ResolvedTheme;
   setTheme: (theme: ThemePreference) => void;
+  /** The accent id driving the `data-accent` attribute. */
+  accent: AccentId;
+  setAccent: (accent: AccentId) => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 /** Mirrors the inline script in app/layout.tsx. */
 const STORAGE_KEY = "trackit-theme";
+const ACCENT_STORAGE_KEY = "trackit-accent";
 const PREFERENCES_URL = "/api/user/preferences";
 
 const THEMES: ThemePreference[] = ["dark", "light", "system"];
@@ -42,6 +51,15 @@ function readStoredTheme(): ThemePreference {
     // Private mode or storage disabled — the fallback below still applies.
   }
   return "system";
+}
+
+function readStoredAccent(): AccentId {
+  if (typeof window === "undefined") return DEFAULT_ACCENT;
+  try {
+    return normaliseAccent(window.localStorage.getItem(ACCENT_STORAGE_KEY));
+  } catch {
+    return DEFAULT_ACCENT;
+  }
 }
 
 function prefersLight(): boolean {
@@ -62,8 +80,17 @@ function applyTheme(resolved: ResolvedTheme) {
   root.classList.add(resolved);
 }
 
+/**
+ * The attribute is what remaps `--color-indigo-*` in globals.css, which every
+ * Tailwind indigo utility resolves through.
+ */
+function applyAccent(accent: AccentId) {
+  document.documentElement.setAttribute("data-accent", accent);
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(readStoredTheme);
+  const [accent, setAccentState] = useState<AccentId>(readStoredAccent);
   const [systemResolved, setSystemResolved] = useState<ResolvedTheme>(systemTheme);
   const { data: preferences } = useThemePreferences();
 
@@ -89,6 +116,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTheme(resolvedTheme);
   }, [resolvedTheme]);
 
+  // …and the attribute is what switches the accent ramp.
+  useEffect(() => {
+    applyAccent(accent);
+  }, [accent]);
+
   // First paint comes from localStorage (see the inline script), so the
   // database only has to reconcile once, when the stored row arrives.
   useEffect(() => {
@@ -103,6 +135,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         // Storage is optional; the class is applied from state anyway.
       }
       return stored;
+    });
+  }, [preferences]);
+
+  useEffect(() => {
+    const stored = preferences?.accent;
+    if (!stored) return;
+
+    setAccentState((current) => {
+      const next = normaliseAccent(stored);
+      if (current === next) return current;
+      try {
+        window.localStorage.setItem(ACCENT_STORAGE_KEY, next);
+      } catch {
+        // Storage is optional; the attribute is applied from state anyway.
+      }
+      return next;
     });
   }, [preferences]);
 
@@ -126,8 +174,28 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setAccent = useCallback((next: AccentId) => {
+    // Same order as setTheme: paint first, write second, never roll back the
+    // visible choice because a request failed.
+    setAccentState(next);
+
+    try {
+      window.localStorage.setItem(ACCENT_STORAGE_KEY, next);
+    } catch {
+      // Ignore storage failures.
+    }
+
+    fetch(PREFERENCES_URL, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accent: next }),
+    }).catch(() => {
+      // The accent is applied locally regardless.
+    });
+  }, []);
+
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, accent, setAccent }}>
       {children}
     </ThemeContext.Provider>
   );

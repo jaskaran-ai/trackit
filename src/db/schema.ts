@@ -304,6 +304,8 @@ export const userPreference = pgTable("userPreference", {
     .primaryKey()
     .references(() => user.id, { onDelete: "cascade" }),
   theme: text("theme").default("dark").notNull(),
+  /** Design-system accent, see ACCENT_IDS in src/lib/accents.ts. */
+  accent: text("accent").default("indigo").notNull(),
   inAppNotifications: boolean("inAppNotifications").default(true).notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" })
     .defaultNow()

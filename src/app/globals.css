@@ -49,6 +49,15 @@
   --color-indigo-600: #4f46e5;
   --color-indigo-700: #4338ca;
 
+  /*
+   * Semantic accent tokens (arc's set). `data-accent` on <html> remaps them,
+   * and every `bg-indigo-*` / `text-indigo-*` utility follows because Tailwind
+   * resolves those utilities through `--color-indigo-*`.
+   */
+  --accent: #6366f1;
+  --accent-strong: #4f46e5;
+  --accent-on: #ffffff;
+
   /* Status hues, shared by the badges in lib/utils. */
   --color-blue-300: #93c5fd;
   --color-blue-400: #60a5fa;
@@ -130,12 +139,14 @@ html.light {
   --color-white: #18181b;
 }
 
-/* Filled controls keep real white labels, now over a darker indigo/red. */
+/* Filled controls keep readable labels. Colour comes from `--accent-on` so a
+   low-contrast hue (amber, green in dark mode) can flip to dark ink instead of
+   failing contrast. */
 html.light .bg-indigo-500.text-white,
 html.light .bg-indigo-600.text-white,
 html.light .bg-red-500.text-white,
 html.light .bg-red-600.text-white {
-  color: #ffffff;
+  color: var(--accent-on, #ffffff);
 }
 
 /* ...and real white spinner arcs inside those controls. */
@@ -151,6 +162,102 @@ html.light .bg-white {
 
 html.light .bg-white.text-zinc-900 {
   color: var(--color-zinc-100);
+}
+
+/* ---------------------------------------------------------------------------
+ * Accent palette
+ *
+ * `data-accent` on <html> remaps the indigo variables, and every Tailwind
+ * `bg-indigo-*` / `text-indigo-*` / `border-indigo-*` utility resolves through
+ * them, so the whole app follows the chosen accent with no component edits.
+ * Status hues (blue, amber, violet, emerald, red) are a different family and
+ * keep their meaning, which is why only indigo is remapped.
+ *
+ * Two ramps per accent, because contrast differs by theme:
+ *   --d-*  dark theme, the default
+ *   --l-*  light theme, where accent text sits on a near-white surface, so the
+ *          shades drop two steps darker and the fill darkens enough that a
+ *          white label clears AA (4.5:1)
+ * Amber and green keep their bright fill in dark mode and switch to dark ink
+ * through --accent-on, because white on those hues fails.
+ * --------------------------------------------------------------------------- */
+
+[data-accent="indigo"] {
+  --d-300: #a5b4fc; --d-400: #818cf8; --d-500: #6366f1; --d-600: #4f46e5;
+  --accent-on: #ffffff;
+  --l-300: #4338ca; --l-400: #4f46e5; --l-500: #4f46e5; --l-600: #4338ca;
+}
+[data-accent="violet"] {
+  --d-300: #c4b5fd; --d-400: #a78bfa; --d-500: #8b5cf6; --d-600: #7c3aed;
+  --accent-on: #ffffff;
+  --l-300: #6d28d9; --l-400: #6d28d9; --l-500: #6d28d9; --l-600: #5b21b6;
+}
+[data-accent="blue"] {
+  --d-300: #93c5fd; --d-400: #60a5fa; --d-500: #3b82f6; --d-600: #2563eb;
+  --accent-on: #ffffff;
+  --l-300: #1d4ed8; --l-400: #1d4ed8; --l-500: #1d4ed8; --l-600: #1e40af;
+}
+[data-accent="green"] {
+  --d-300: #86efac; --d-400: #4ade80; --d-500: #22c55e; --d-600: #16a34a;
+  --accent-on: #052e16;
+  --l-300: #15803d; --l-400: #15803d; --l-500: #15803d; --l-600: #166534;
+}
+[data-accent="amber"] {
+  --d-300: #fcd34d; --d-400: #fbbf24; --d-500: #f59e0b; --d-600: #d97706;
+  --accent-on: #1c1917;
+  --l-300: #b45309; --l-400: #b45309; --l-500: #b45309; --l-600: #92400e;
+}
+[data-accent="orange"] {
+  --d-300: #fdba74; --d-400: #fb923c; --d-500: #f97316; --d-600: #ea580c;
+  --accent-on: #ffffff;
+  --l-300: #c2410c; --l-400: #c2410c; --l-500: #c2410c; --l-600: #9a3412;
+}
+[data-accent="coral"] {
+  --d-300: #fecdd3; --d-400: #fda4af; --d-500: #fb7185; --d-600: #f43f5e;
+  --accent-on: #ffffff;
+  --l-300: #be123c; --l-400: #be123c; --l-500: #be123c; --l-600: #9f1239;
+}
+[data-accent="rose"] {
+  --d-300: #fda4af; --d-400: #fb7185; --d-500: #f43f5e; --d-600: #e11d48;
+  --accent-on: #ffffff;
+  --l-300: #be123c; --l-400: #be123c; --l-500: #be123c; --l-600: #9f1239;
+}
+[data-accent="neutral"] {
+  --d-300: #d4d4d8; --d-400: #a1a1aa; --d-500: #71717a; --d-600: #52525b;
+  --accent-on: #ffffff;
+  --l-300: #3f3f46; --l-400: #3f3f46; --l-500: #3f3f46; --l-600: #27272a;
+}
+
+/* Dark theme: the --d-* ramp wins. */
+[data-accent] {
+  --color-indigo-300: var(--d-300);
+  --color-indigo-400: var(--d-400);
+  --color-indigo-500: var(--d-500);
+  --color-indigo-600: var(--d-600);
+  --accent: var(--d-500);
+  --accent-strong: var(--d-600);
+}
+
+/* Light theme outranks the block above. Two rules: `.light[data-accent]`
+   covers the root, and the spaced one covers an inner element scoped for a
+   swatch preview, which must inherit the light ramp not the dark one. */
+.light[data-accent],
+.light [data-accent] {
+  --color-indigo-300: var(--l-300);
+  --color-indigo-400: var(--l-400);
+  --color-indigo-500: var(--l-500);
+  --color-indigo-600: var(--l-600);
+  --accent: var(--l-500);
+  --accent-strong: var(--l-600);
+  /* Light fills are already the darker 700 step, so every hue clears AA with
+     white ink — including amber and green, which need dark ink on dark. */
+  --accent-on: #ffffff;
+}
+
+/* A shared accent ring for keyboard focus only. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 * {
