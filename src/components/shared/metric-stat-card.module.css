@@ -2,15 +2,15 @@
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-surface);
-  padding: var(--space-6);
+  padding: var(--space-3) var(--space-4);
   background: var(--surface);
   box-shadow: var(--shadow-resting);
 }
 
 .label {
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-2);
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   line-height: 1.2;
 }
 
@@ -18,12 +18,12 @@
   display: flex;
   min-width: 0;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-4);
 }
 
 .icon {
   flex: none;
-  margin-inline-start: var(--space-1);
   width: 2.25rem;
   height: 2.25rem;
   color: var(--text-secondary);
@@ -45,22 +45,16 @@
   color: var(--warning);
 }
 
-/* Counter brings its own display scale; keep the row optically centered. */
-
 .card p {
-  margin: var(--space-4) 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--text-muted);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   line-height: var(--leading-body);
 }
 
 @media (max-width: 380px) {
   .card {
-    padding: var(--space-4);
-  }
-
-  .label {
-    margin-bottom: var(--space-6);
+    padding: var(--space-3);
   }
 
   .icon {
