@@ -1,4 +1,4 @@
-import { isServer, QueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 
 const STALE_TIME = 30_000;
 const GC_TIME = 5 * 60_000;
@@ -13,10 +13,16 @@ export const queryKeys = {
     all: ["notifications"] as const,
     /** The bell's summary payload: rows plus the unread count. */
     list: ["notifications", "list"] as const,
+    /** Lightweight unread badge count, polled independently of the list. */
+    unread: ["notifications", "unread"] as const,
   },
   preferences: ["preferences"] as const,
   adminViews: ["admin", "views"] as const,
   archived: ["admin", "archived"] as const,
+  adminStats: ["admin", "stats"] as const,
+  adminUsers: ["admin", "users"] as const,
+  adminSubmissions: ["admin", "submissions"] as const,
+  adminVotes: ["admin", "votes"] as const,
   comments: (submissionId: string) => ["comments", submissionId] as const,
   history: (submissionId: string) => ["history", submissionId] as const,
   submissions: {
@@ -24,6 +30,14 @@ export const queryKeys = {
     all: ["submissions"] as const,
     /** Debounced duplicate lookup used by the submit page. */
     search: (query: string) => ["submissions", "search", query] as const,
+  },
+  dashboard: {
+    count: (filters: Record<string, string>) =>
+      ["dashboard", "count", filters] as const,
+    submissions: ["dashboard", "submissions"] as const,
+    votes: ["dashboard", "votes"] as const,
+    /** Single payload: metrics + lean rows + vote board. */
+    summary: ["dashboard", "summary"] as const,
   },
 } as const;
 
@@ -52,7 +66,7 @@ let browserQueryClient: QueryClient | undefined;
  * users, while the browser keeps one stable client for the lifetime of the tab.
  */
 export function getQueryClient() {
-  if (isServer) return createQueryClient();
+  if (typeof window === "undefined") return createQueryClient();
 
   browserQueryClient ??= createQueryClient();
   return browserQueryClient;

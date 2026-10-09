@@ -5,6 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Prefers `_count.attachments` from lean list rows; falls back to array length. */
+export function submissionAttachmentCount(s: {
+  attachments?: { length: number };
+  _count?: { attachments?: number };
+}): number {
+  if (typeof s._count?.attachments === "number") return s._count.attachments;
+  return s.attachments?.length ?? 0;
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
