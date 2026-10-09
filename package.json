@@ -14,6 +14,7 @@
     "auth:schema": "pnpm dlx auth@1.7.7 generate --config src/lib/auth.ts --adapter drizzle --dialect postgresql --output src/db/auth-schema.generated.ts -y"
   },
   "dependencies": {
+    "@animateicons/react": "0.12.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@orpc/client": "1.15.5",
     "@orpc/openapi": "1.15.5",

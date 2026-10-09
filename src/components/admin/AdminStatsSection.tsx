@@ -1,8 +1,16 @@
 "use client";
 
+import {
+  BugIcon,
+  CircleDotIcon,
+  ClipboardCheckIcon,
+  LayersIcon,
+  LoaderIcon,
+  UsersIcon,
+} from "@animateicons/react/lucide";
 import StatsCharts from "@/components/admin/StatsCharts";
-import { MetricCard } from "@/components/arc/metric-card/metric-card";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
+import MetricStatCard from "@/components/shared/MetricStatCard";
 import { useAdminStats } from "@/hooks/use-admin-data";
 
 /**
@@ -17,28 +25,42 @@ export default function AdminStatsSection() {
       <Skeleton loading={!stats} lines={2} label="Loading metrics">
         {stats ? (
           <div className="mb-6 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-6">
-            <MetricCard label="Total" value={stats.total} context="All time" />
-            <MetricCard
+            <MetricStatCard
+              icon={LayersIcon}
+              label="Total"
+              value={stats.total}
+              context="All time"
+            />
+            <MetricStatCard
+              icon={CircleDotIcon}
+              tone="warning"
               label="Open"
               value={stats.byStatus.open}
               context="Awaiting triage"
             />
-            <MetricCard
+            <MetricStatCard
+              icon={LoaderIcon}
+              tone="accent"
               label="In progress"
               value={stats.byStatus.inProgress}
               context="Being worked on"
             />
-            <MetricCard
+            <MetricStatCard
+              icon={ClipboardCheckIcon}
+              tone="success"
               label="In review"
               value={stats.byStatus.review}
               context="Awaiting sign-off"
             />
-            <MetricCard
+            <MetricStatCard
+              icon={BugIcon}
+              tone="danger"
               label="Bugs"
               value={stats.byType.bugs}
               context={`${stats.byType.features} feature requests`}
             />
-            <MetricCard
+            <MetricStatCard
+              icon={UsersIcon}
               label="Users"
               value={stats.users}
               context={`${stats.archived} archived`}
