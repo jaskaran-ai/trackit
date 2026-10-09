@@ -12,30 +12,15 @@ import {
   restoreSubmission,
   updateSubmission,
 } from "@/db/submissions";
-import type {
-  Priority,
-  Project,
-  SubmissionStatus,
-  SubmissionType,
+import type { Priority, Project, SubmissionStatus, SubmissionType } from "@/db/types";
+import {
+  PRIORITIES,
+  PROJECTS,
+  SUBMISSION_STATUSES,
+  SUBMISSION_TYPES,
 } from "@/db/types";
 import { badRequest, forbidden, notFound, protectedProcedure } from "@/orpc/context";
 
-const SUBMISSION_TYPES: SubmissionType[] = ["BUG", "FEATURE"];
-const SUBMISSION_STATUSES: SubmissionStatus[] = [
-  "OPEN",
-  "IN_PROGRESS",
-  "REVIEW",
-  "COMPLETE",
-  "CANCELED",
-];
-const PRIORITIES: Priority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
-const PROJECTS: Project[] = [
-  "IVALT_MOBILE",
-  "DOCU_ID",
-  "ONDEMAND_ID",
-  "KEYCLOCK",
-  "OTHER",
-];
 const SORT_KEYS = [
   "createdAt",
   "updatedAt",

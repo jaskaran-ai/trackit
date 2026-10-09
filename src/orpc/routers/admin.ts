@@ -3,17 +3,23 @@ import { getSubmissionStats, listSubmissions } from "@/db/submissions";
 import { listUsers, updateUserRole } from "@/db/users";
 import { createSavedView, deleteSavedView, listSavedViews } from "@/db/views";
 import type { Role } from "@/db/types";
+import {
+  PRIORITIES,
+  PROJECTS,
+  SUBMISSION_STATUSES,
+  SUBMISSION_TYPES,
+} from "@/db/types";
 import { adminProcedure, badRequest, notFound } from "@/orpc/context";
 
 const ROLES: Role[] = ["user", "admin"];
 
+/* The same member lists the user-facing filters are built from, so the admin
+   table cannot drift into offering a status the dashboard does not. */
 const filterSchema = z.object({
-  status: z.enum(["OPEN", "IN_PROGRESS", "REVIEW", "COMPLETE", "CANCELED"]).optional(),
-  type: z.enum(["BUG", "FEATURE"]).optional(),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
-  project: z
-    .enum(["IVALT_MOBILE", "DOCU_ID", "ONDEMAND_ID", "KEYCLOCK", "OTHER"])
-    .optional(),
+  status: z.enum(SUBMISSION_STATUSES).optional(),
+  type: z.enum(SUBMISSION_TYPES).optional(),
+  priority: z.enum(PRIORITIES).optional(),
+  project: z.enum(PROJECTS).optional(),
   search: z.string().optional(),
 });
 
