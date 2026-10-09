@@ -1,4 +1,4 @@
-import { count, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { db } from "./index";
 import { submission, user } from "./schema";
 import type { Role } from "./types";
@@ -24,18 +24,25 @@ export async function listUsers(options: { search?: string } = {}) {
       image: user.image,
       role: user.role,
       createdAt: user.createdAt,
-      // Column names are camelCase in this database, hence the quoting.
-      submissions: sql<number>`(
-        select count(*)::int from "submission"
-        where "submission"."userId" = "user"."id"
-          and "submission"."deletedAt" is null
-      )`,
+      submissions: sql<number>`count(${submission.id})::int`,
     })
     .from(user)
+    .leftJoin(
+      submission,
+      and(eq(submission.userId, user.id), isNull(submission.deletedAt)),
+    )
     .where(
       search
         ? or(ilike(user.name, `%${search}%`), ilike(user.email, `%${search}%`))
         : undefined,
+    )
+    .groupBy(
+      user.id,
+      user.name,
+      user.email,
+      user.image,
+      user.role,
+      user.createdAt,
     )
     .orderBy(desc(user.createdAt));
 }
