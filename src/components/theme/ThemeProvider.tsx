@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -93,12 +94,24 @@ function applyAccent(accent: AccentId) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemePreference>(readStoredTheme);
-  const [accent, setAccentState] = useState<AccentId>(readStoredAccent);
-  const [systemResolved, setSystemResolved] = useState<ResolvedTheme>(systemTheme);
+  // The first client render must reproduce the server's markup, so state starts
+  // at the SSR fallbacks (system, dark, default accent) instead of the real
+  // stored values — reading localStorage or matchMedia here would hydrate a
+  // different tree. The inline script in app/layout.tsx has already painted
+  // the true theme on <html>; the effect below reconciles state with it.
+  const [theme, setThemeState] = useState<ThemePreference>("system");
+  const [accent, setAccentState] = useState<AccentId>(DEFAULT_ACCENT);
+  const [systemResolved, setSystemResolved] = useState<ResolvedTheme>("dark");
   const { data: preferences } = useThemePreferences();
 
   const resolvedTheme: ResolvedTheme = theme === "system" ? systemResolved : theme;
+
+  // After hydration the stored choices land as an ordinary state update, which
+  // ThemeSwitch's settled logic swaps in without animating.
+  useEffect(() => {
+    setThemeState(readStoredTheme());
+    setAccentState(readStoredAccent());
+  }, []);
 
   // Follow the OS preference, which only matters while theme is "system".
   // The listener is registered once and torn down with the provider.
@@ -115,13 +128,27 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => query.removeEventListener("change", onChange);
   }, []);
 
+  // The inline script owns the first paint: skipping each apply effect's
+  // opening run keeps the SSR fallback from overwriting the real theme before
+  // the reconciling update above lands it.
+  const themeApplied = useRef(false);
+  const accentApplied = useRef(false);
+
   // Applying the class is what switches every zinc utility in the app.
   useEffect(() => {
+    if (!themeApplied.current) {
+      themeApplied.current = true;
+      return;
+    }
     applyTheme(resolvedTheme);
   }, [resolvedTheme]);
 
   // …and the attribute is what switches the accent ramp.
   useEffect(() => {
+    if (!accentApplied.current) {
+      accentApplied.current = true;
+      return;
+    }
     applyAccent(accent);
   }, [accent]);
 

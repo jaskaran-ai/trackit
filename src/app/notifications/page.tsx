@@ -32,8 +32,8 @@ export default async function NotificationsPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+      <main className="mx-auto max-w-3xl px-3 py-6 sm:px-5">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-2.5">
           <div>
             <h1 className="font-display text-2xl font-500 text-foreground">
               Notifications

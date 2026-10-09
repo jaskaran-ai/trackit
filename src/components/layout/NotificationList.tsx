@@ -78,7 +78,7 @@ export function NotificationRow({
     </>
   );
 
-  const shell = "flex w-full items-start gap-3 px-3 py-3 text-left";
+  const shell = "flex w-full items-start gap-2.5 px-2.5 py-2.5 text-left";
 
   if (!clickable) {
     return <div className={cn(shell, "cursor-default")}>{body}</div>;
@@ -163,7 +163,7 @@ export default function NotificationList({ isAdmin = false }: { isAdmin?: boolea
 
       {visible.length === 0 ? (
         <EmptyState
-          className="py-16"
+          className="py-12"
           icon={<Bell size={18} aria-hidden />}
           title="You're all caught up"
           description={

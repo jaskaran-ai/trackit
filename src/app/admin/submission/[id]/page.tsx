@@ -38,32 +38,32 @@ export default async function AdminSubmissionDetailPage({
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-3xl mx-auto px-3 sm:px-5 py-6">
         <Link
           href="/admin"
-          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors mb-6"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors mb-5"
         >
           <ChevronLeft size={15} />
           Back to admin
         </Link>
 
-        <div className=" space-y-4">
+        <div className=" space-y-3">
           {/* Header card */}
-          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6">
-            <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5">
+            <div className="flex items-start justify-between gap-3 mb-3">
               <h1 className="font-display text-xl font-500 text-foreground leading-snug flex-1">
                 {submission.title}
               </h1>
               <StatusBadge status={submission.status} />
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-5">
+            <div className="flex flex-wrap gap-2 mb-4">
               <TypeBadge type={submission.type} />
               <PriorityBadge priority={submission.priority} />
             </div>
 
             {/* Reporter info */}
-            <div className="flex items-center gap-3 py-4 border-t border-b border-[var(--border-subtle)] mb-4">
+            <div className="flex items-center gap-2.5 py-3 border-t border-b border-[var(--border-subtle)] mb-3">
               {submission.user.image ? (
                 <img
                   src={submission.user.image}
@@ -87,7 +87,7 @@ export default async function AdminSubmissionDetailPage({
 
             {/* Due date / resolved */}
             {(submission.dueDate || submission.resolvedAt) && (
-              <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                 {submission.dueDate && (
                   <span className="flex items-center gap-1.5 text-secondary">
                     <CalendarClock size={12} className="text-muted" />
@@ -108,8 +108,8 @@ export default async function AdminSubmissionDetailPage({
           </div>
 
           {/* Description */}
-          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6">
-            <h2 className="font-display text-sm font-500 text-secondary mb-4">
+          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5">
+            <h2 className="font-display text-sm font-500 text-secondary mb-3">
               Description
             </h2>
             <div
@@ -122,8 +122,8 @@ export default async function AdminSubmissionDetailPage({
 
           {/* Attachments */}
           {submission.attachments.length > 0 && (
-            <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6">
-              <h2 className="font-display text-sm font-500 text-secondary mb-4 flex items-center gap-2">
+            <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5">
+              <h2 className="font-display text-sm font-500 text-secondary mb-3 flex items-center gap-2">
                 <Paperclip size={13} />
                 Attachments ({submission.attachments.length})
               </h2>
@@ -139,7 +139,7 @@ export default async function AdminSubmissionDetailPage({
                       href={att.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 bg-surface-muted hover:bg-surface-raised border border-border rounded-control px-3 py-2.5 transition-all group"
+                      className="flex items-center gap-2.5 bg-surface-muted hover:bg-surface-raised border border-border rounded-control px-2.5 py-2 transition-all group"
                     >
                       <div className="w-8 h-8 bg-surface-raised rounded-md flex items-center justify-center shrink-0">
                         {isImage ? (

@@ -31,7 +31,7 @@ export default function BulkActions({
   onClear: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] bg-accent-subtle px-4 py-2.5">
+    <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] bg-accent-subtle px-3 py-2">
       <span className="rounded-control bg-accent-subtle px-2 py-0.5 text-xs font-500 text-accent">
         {count} selected
       </span>

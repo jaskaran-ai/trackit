@@ -156,10 +156,10 @@ export default function SubmitPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-2xl px-3 py-6 sm:px-5">
         <Link
           href="/dashboard"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
+          className="mb-5 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft size={15} aria-hidden />
           Back to dashboard
@@ -168,11 +168,11 @@ export default function SubmitPage() {
         <h1 className="mb-1 font-display text-2xl font-500 text-foreground">
           New submission
         </h1>
-        <p className="mb-8 text-sm text-muted">
+        <p className="mb-6 text-sm text-muted">
           Report a bug or request a new feature
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <Alert tone="danger" title="Could not submit" onDismiss={() => setError(null)}>
               {error}

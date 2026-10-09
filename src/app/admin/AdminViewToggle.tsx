@@ -20,10 +20,10 @@ export default function AdminViewToggle({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
         <Link
           href="/admin/archived"
-          className="inline-flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm text-secondary transition-colors hover:bg-surface-muted hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-control px-2.5 py-1.5 text-sm text-secondary transition-colors hover:bg-surface-muted hover:text-foreground"
         >
           <Archive size={13} aria-hidden />
           Archived

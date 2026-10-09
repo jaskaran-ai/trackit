@@ -53,7 +53,7 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-[var(--border-subtle)] bg-[color-mix(in_oklab,var(--background)_88%,transparent)] backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-3 sm:px-5">
         <Link href="/dashboard" className="flex shrink-0 items-center">
           <BrandLogo className="h-7 sm:h-8" />
         </Link>

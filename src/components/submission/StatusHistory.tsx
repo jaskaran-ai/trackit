@@ -117,8 +117,8 @@ export default function StatusHistory({ submissionId }: { submissionId: string }
   }));
 
   return (
-    <section className="mb-4 rounded-panel border border-border bg-surface p-6">
-      <h2 className="mb-4 flex items-center gap-2 font-display text-sm font-500 text-secondary">
+    <section className="mb-3 rounded-panel border border-border bg-surface p-5">
+      <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-500 text-secondary">
         <History size={13} aria-hidden />
         History
       </h2>

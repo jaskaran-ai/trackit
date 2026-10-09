@@ -63,14 +63,14 @@ export default function SignInPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-surface p-12 lg:flex">
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-surface p-10 lg:flex">
         <div>
           <BrandLogo className="h-10 sm:h-12" />
-          <p className="mt-3 text-sm text-muted">Bug and feature tracker</p>
+          <p className="mt-2.5 text-sm text-muted">Bug and feature tracker</p>
         </div>
 
         <div>
-          <h1 className="mb-6 font-display text-4xl font-500 leading-tight text-foreground">
+          <h1 className="mb-5 font-display text-4xl font-500 leading-tight text-foreground">
             Ship better software,
             <br />
             <span className="text-accent">together.</span>
@@ -81,9 +81,9 @@ export default function SignInPage() {
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {FEATURES.map(({ icon: Icon, label, desc }) => (
-            <div key={label} className="flex items-start gap-3">
+            <div key={label} className="flex items-start gap-2.5">
               <Icon size={15} aria-hidden className="mt-0.5 shrink-0 text-accent" />
               <div>
                 <div className="text-sm font-500 text-foreground">{label}</div>
@@ -94,13 +94,13 @@ export default function SignInPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 items-center justify-center p-8">
+      <div className="flex flex-1 items-center justify-center p-6">
         <div className="w-full max-w-sm">
-          <div className="mb-10 lg:hidden">
+          <div className="mb-8 lg:hidden">
             <BrandLogo className="h-9" />
           </div>
 
-          <div className="mb-8">
+          <div className="mb-6">
             <h2 className="mb-2 font-display text-2xl font-500 text-foreground">
               Welcome back
             </h2>
@@ -122,7 +122,7 @@ export default function SignInPage() {
             {loading ? "Signing in" : "Continue with Google"}
           </Button>
 
-          <p className="mt-6 text-center text-xs text-muted">
+          <p className="mt-5 text-center text-xs text-muted">
             TrackIt uses your Google account to sign you in.
           </p>
         </div>

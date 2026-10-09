@@ -142,7 +142,7 @@ export default function DashboardFilters({
 
   return (
     <>
-      <div className="mb-4 rounded-panel border border-border bg-surface p-3">
+      <div className="mb-3 rounded-panel border border-border bg-surface p-2.5">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           <div className="min-w-0 flex-1">
             <SearchField
@@ -251,7 +251,7 @@ export default function DashboardFilters({
       {filtered.length === 0 ? (
         <div className="rounded-panel border border-border bg-surface">
           <EmptyState
-            className="py-16"
+            className="py-12"
             icon={<Inbox size={20} aria-hidden />}
             title="No matches"
             description="Nothing matches these filters. Try widening the search."
@@ -263,7 +263,7 @@ export default function DashboardFilters({
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((submission) => (
             <SubmissionCard key={submission.id} submission={submission} />
           ))}

@@ -102,6 +102,28 @@ export default function PreferencesForm({ initial }: { initial: Preferences }) {
           role="radiogroup"
           aria-label="Accent colour"
           className="flex flex-wrap items-center gap-2"
+          onKeyDown={(event) => {
+            if (
+              event.key !== "ArrowRight" &&
+              event.key !== "ArrowLeft" &&
+              event.key !== "ArrowUp" &&
+              event.key !== "ArrowDown"
+            ) {
+              return;
+            }
+            event.preventDefault();
+            const current = ACCENT_IDS.indexOf(accent);
+            const step =
+              event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+            const next =
+              ACCENT_IDS[
+                (current + step + ACCENT_IDS.length) % ACCENT_IDS.length
+              ];
+            setAccentValue(next);
+            document
+              .querySelector<HTMLElement>(`[data-testid="accent-${next}"]`)
+              ?.focus();
+          }}
         >
           {ACCENT_IDS.map((id) => {
             const selected = accent === id;
@@ -113,13 +135,15 @@ export default function PreferencesForm({ initial }: { initial: Preferences }) {
                 aria-checked={selected}
                 aria-label={ACCENT_LABELS[id]}
                 onClick={() => setAccentValue(id)}
-                /* Scoped to the swatch so the dot paints with the real tokens for
-                   this hue. The palette lives only in Arc's foundation.css, so
-                   there is no second copy of these colours in JS to drift. */
+                /* Scoped to the swatch so the dot paints with the real Arc
+                   tokens for this hue. The palette lives only in Arc's
+                   foundation.css on generic `[data-accent]` selectors (not
+                   `:root`), so there is no second copy of these colours in
+                   JS to drift. */
                 data-accent={id}
                 data-testid={`accent-${id}`}
                 className={cn(
-                  "flex h-9 w-9 cursor-pointer items-center justify-center rounded-control border transition-colors",
+                  "flex h-11 w-11 cursor-pointer items-center justify-center rounded-control border transition-colors",
                   selected
                     ? "border-foreground"
                     : "border-border hover:border-border-strong",
@@ -134,6 +158,7 @@ export default function PreferencesForm({ initial }: { initial: Preferences }) {
                   {selected && (
                     <Check
                       size={12}
+                      strokeWidth={3}
                       className="text-accent-foreground"
                       aria-hidden="true"
                     />
@@ -148,7 +173,7 @@ export default function PreferencesForm({ initial }: { initial: Preferences }) {
       <div className="h-px bg-[var(--border-subtle)]" />
 
       <SectionHeading title="Notifications">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <div className="min-w-0 flex-1">
             <p className="font-500 text-foreground">In-app notifications</p>
             <p className="mt-0.5 text-sm text-muted">

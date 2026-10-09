@@ -62,8 +62,8 @@ export default function StatsCharts({ stats }: { stats: AdminStats }) {
   );
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-panel border border-border bg-surface p-4">
+    <div className="space-y-3">
+      <div className="rounded-panel border border-border bg-surface p-3">
         <LineChart
           label="Created and resolved over the last 30 days"
           height={180}
@@ -84,7 +84,7 @@ export default function StatsCharts({ stats }: { stats: AdminStats }) {
         />
       </div>
 
-      <div className="rounded-panel border border-border bg-surface p-4">
+      <div className="rounded-panel border border-border bg-surface p-3">
         <BarChart
           label="Submissions per project"
           period="All time"

@@ -78,7 +78,7 @@ export default function AttachmentLightbox({
         description={current.fileName}
         className="max-w-4xl"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {showArrows && (
             <Button
               variant="secondary"
@@ -90,7 +90,7 @@ export default function AttachmentLightbox({
             </Button>
           )}
 
-          <figure className="flex min-w-0 flex-1 flex-col items-center gap-3">
+          <figure className="flex min-w-0 flex-1 flex-col items-center gap-2.5">
             {current.mimeType.startsWith("image/") ? (
               <img
                 src={current.fileUrl}
@@ -105,7 +105,7 @@ export default function AttachmentLightbox({
                 className="max-h-[70vh] max-w-full rounded-control border border-border bg-black"
               />
             ) : (
-              <div className="flex max-w-sm flex-col items-center gap-3 rounded-panel border border-border bg-surface-muted p-8 text-center">
+              <div className="flex max-w-sm flex-col items-center gap-2.5 rounded-panel border border-border bg-surface-muted p-6 text-center">
                 <Film size={22} aria-hidden className="text-muted" />
                 <div>
                   <p className="break-all text-foreground">{current.fileName}</p>

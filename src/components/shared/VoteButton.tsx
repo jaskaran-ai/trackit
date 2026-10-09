@@ -16,7 +16,7 @@ type Summary = { count: number; hasVoted: boolean };
 
 const SIZES = {
   sm: "h-7 px-2 gap-1 text-xs [&_svg]:size-3",
-  md: "h-9 px-3 gap-1.5 text-sm [&_svg]:size-4",
+  md: "h-9 px-2.5 gap-1.5 text-sm [&_svg]:size-4",
 } as const;
 
 export default function VoteButton({

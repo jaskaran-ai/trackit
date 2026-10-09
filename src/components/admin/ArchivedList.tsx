@@ -30,7 +30,7 @@ function ArchivedRow({
   const archivedDate = submission.deletedAt ?? submission.updatedAt;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)]/60 px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-muted/30">
+    <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-[var(--border-subtle)]/60 px-3 py-2.5 transition-colors last:border-b-0 hover:bg-surface-muted/30">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm text-foreground">{submission.title}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -141,7 +141,7 @@ export default function ArchivedList({
   if (rows.length === 0) {
     return (
       <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-12 text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
+        <div className="mx-auto mb-2.5 flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
           <Inbox size={22} className="text-muted" />
         </div>
         <p className="text-sm text-secondary">Nothing is archived</p>
@@ -154,7 +154,7 @@ export default function ArchivedList({
 
   return (
     <div className="bg-surface border border-[var(--border-subtle)] rounded-panel overflow-hidden">
-      <div className="border-b border-[var(--border-subtle)] px-4 py-2.5 text-xs text-muted">
+      <div className="border-b border-[var(--border-subtle)] px-3 py-2 text-xs text-muted">
         {rows.length} archived submission{rows.length !== 1 ? "s" : ""}
       </div>
       <div className="divide-y divide-[var(--border-subtle)]/60">

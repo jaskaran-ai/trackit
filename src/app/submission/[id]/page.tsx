@@ -33,10 +33,10 @@ export default async function SubmissionDetailPage({
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-3xl mx-auto px-3 sm:px-5 py-6">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors mb-6"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors mb-5"
         >
           <ChevronLeft size={15} />
           Back to dashboard
@@ -44,8 +44,8 @@ export default async function SubmissionDetailPage({
 
         <div className="">
           {/* Header */}
-          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6 mb-4">
-            <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5 mb-3">
+            <div className="flex items-start justify-between gap-3 mb-3">
               <h1 className="font-display text-xl font-500 text-foreground leading-snug flex-1">
                 {submission.title}
               </h1>
@@ -57,12 +57,12 @@ export default async function SubmissionDetailPage({
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-5">
+            <div className="flex flex-wrap gap-2 mb-4">
               <TypeBadge type={submission.type} />
               <PriorityBadge priority={submission.priority} />
             </div>
 
-            <div className="flex items-center gap-3 pt-4 border-t border-[var(--border-subtle)]">
+            <div className="flex items-center gap-2.5 pt-4 border-t border-[var(--border-subtle)]">
               {submission.user.image ? (
                 <img
                   src={submission.user.image}
@@ -82,8 +82,8 @@ export default async function SubmissionDetailPage({
           </div>
 
           {/* Description */}
-          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6 mb-4">
-            <h2 className="font-display text-sm font-500 text-secondary mb-4">
+          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5 mb-3">
+            <h2 className="font-display text-sm font-500 text-secondary mb-3">
               Description
             </h2>
             <div
@@ -94,8 +94,8 @@ export default async function SubmissionDetailPage({
 
           {/* Attachments */}
           {submission.attachments.length > 0 && (
-            <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-6 mb-4">
-              <h2 className="font-display text-sm font-500 text-secondary mb-4 flex items-center gap-2">
+            <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5 mb-3">
+              <h2 className="font-display text-sm font-500 text-secondary mb-3 flex items-center gap-2">
                 <Paperclip size={13} />
                 Attachments ({submission.attachments.length})
               </h2>

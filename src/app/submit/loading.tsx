@@ -5,13 +5,13 @@ export default function SubmitLoading() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-2xl mx-auto px-3 sm:px-5 py-6">
         {/* Back link */}
-        <div className="w-32 h-4 skeleton mb-6" />
+        <div className="w-32 h-4 skeleton mb-5" />
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Title */}
-          <div className="space-y-2 mb-8">
+          <div className="space-y-2 mb-6">
             <div className="w-40 h-7 skeleton" />
             <div className="w-56 h-4 skeleton" />
           </div>

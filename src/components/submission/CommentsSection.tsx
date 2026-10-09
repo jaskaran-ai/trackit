@@ -47,8 +47,8 @@ export default function CommentsSection({
 
   if (comments === undefined) {
     return (
-      <section className="rounded-panel border border-border bg-surface p-6">
-        <h2 className="mb-4 flex items-center gap-2 font-display text-sm font-500 text-secondary">
+      <section className="rounded-panel border border-border bg-surface p-5">
+        <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-500 text-secondary">
           <MessageSquare size={13} aria-hidden />
           Comments
         </h2>
@@ -148,7 +148,7 @@ export default function CommentsSection({
       />
 
       {isAdmin && (
-        <p className="mt-3 text-xs text-muted">
+        <p className="mt-2.5 text-xs text-muted">
           As an admin you can delete any comment on this submission.
         </p>
       )}

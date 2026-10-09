@@ -31,19 +31,19 @@ export default async function SettingsPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-2xl mx-auto px-3 sm:px-5 py-6">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="font-display text-2xl font-500 text-foreground mb-1">Settings</h1>
           <p className="text-muted text-sm">Your profile and how TrackIt looks to you.</p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Profile */}
-          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-5 sm:p-6">
-            <h2 className="font-display text-sm font-500 text-foreground mb-4">Profile</h2>
+          <div className="bg-surface border border-[var(--border-subtle)] rounded-panel p-4 sm:p-5">
+            <h2 className="font-display text-sm font-500 text-foreground mb-3">Profile</h2>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {profile.image ? (
                 <img
                   src={profile.image}
@@ -67,7 +67,7 @@ export default async function SettingsPage() {
               </div>
             </div>
 
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5 pt-5 border-t border-[var(--border-subtle)]">
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4 pt-5 border-t border-[var(--border-subtle)]">
               <div>
                 <dt className="text-xs text-muted mb-0.5">Role</dt>
                 <dd className="text-sm font-500 text-foreground">

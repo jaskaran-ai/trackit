@@ -38,7 +38,7 @@ function KanbanCard({
         <article
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={`space-y-2.5 rounded-control border bg-surface p-3 ${
+          className={`space-y-2.5 rounded-control border bg-surface p-2.5 ${
             snapshot.isDragging
               ? "border-accent shadow-lg"
               : "border-[var(--border-subtle)] hover:border-border"
@@ -173,7 +173,7 @@ export default function KanbanBoard({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex min-h-[400px] gap-4 overflow-x-auto pb-4">
+      <div className="flex min-h-[400px] gap-3 overflow-x-auto pb-4">
         {SUBMISSION_STATUSES.map((status) => {
           const cards = submissions.filter((s) => s.status === status);
           return (
@@ -182,7 +182,7 @@ export default function KanbanBoard({
               aria-label={`${STATUS_LABELS[status]}, ${cards.length} submissions`}
               className="min-w-[220px] max-w-[280px] flex-1"
             >
-              <header className="mb-3 flex items-center gap-2 px-3 py-2">
+              <header className="mb-2.5 flex items-center gap-2 px-2.5 py-2">
                 <StatusBadge status={status} />
                 <span className="ml-auto text-xs tabular-nums text-muted">
                   {cards.length}
@@ -199,7 +199,7 @@ export default function KanbanBoard({
                     }`}
                   >
                     {cards.length === 0 ? (
-                      <p className="rounded-control border border-dashed border-[var(--border-subtle)] py-8 text-center text-xs text-muted">
+                      <p className="rounded-control border border-dashed border-[var(--border-subtle)] py-6 text-center text-xs text-muted">
                         Nothing here
                       </p>
                     ) : (

@@ -32,15 +32,15 @@ export default function SubmissionCard({ submission, isAdmin }: SubmissionCardPr
     // vote control, and nesting a button inside a link would make clicking it
     // ambiguous.
     <div className="flex flex-col rounded-panel border border-border bg-surface transition-colors hover:border-border-strong">
-      <Link href={href} className="group block flex-1 p-4">
-        <div className="mb-3 flex items-start justify-between gap-3">
+      <Link href={href} className="group block flex-1 p-3">
+        <div className="mb-2.5 flex items-start justify-between gap-2.5">
           <h3 className="line-clamp-1 flex-1 text-sm font-500 leading-snug text-foreground group-hover:underline">
             {submission.title}
           </h3>
           <StatusBadge status={submission.status} />
         </div>
 
-        <div className="mb-3 flex flex-wrap gap-1.5">
+        <div className="mb-2.5 flex flex-wrap gap-1.5">
           <TypeBadge type={submission.type} />
           <PriorityBadge priority={submission.priority} />
         </div>
@@ -60,7 +60,7 @@ export default function SubmissionCard({ submission, isAdmin }: SubmissionCardPr
       </Link>
 
       {/* Footer — deliberately outside the Link */}
-      <div className="flex items-center gap-3 border-t border-[var(--border-subtle)] px-4 py-3 text-xs text-muted">
+      <div className="flex items-center gap-2.5 border-t border-[var(--border-subtle)] px-3 py-2.5 text-xs text-muted">
         {isFeature && (
           <VoteButton
             submissionId={submission.id}
@@ -70,7 +70,7 @@ export default function SubmissionCard({ submission, isAdmin }: SubmissionCardPr
           />
         )}
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2.5">
           <span className="flex items-center gap-1">
             <Clock size={11} aria-hidden />
             {formatDate(submission.createdAt)}
