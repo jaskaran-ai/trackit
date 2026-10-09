@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -8,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const submissionTypeEnum = pgEnum("SubmissionType", ["BUG", "FEATURE"]);
@@ -172,6 +174,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
   accounts: many(account),
   submissions: many(submission),
   comments: many(submissionComment),
+  commentReactions: many(commentReaction),
   votes: many(submissionVote),
   savedViews: many(savedView),
   notifications: many(notification),
@@ -216,8 +219,8 @@ export const attachmentRelations = relations(attachment, ({ one }) => ({
 // ---------------------------------------------------------------------------
 
 /**
- * Replies / discussion on a submission. Anyone who can see the submission can
- * comment; only the author or an admin can delete a comment.
+ * Replies / discussion on a submission. Nested via parentId (up to three reply
+ * levels under a root). Soft-deleted rows keep place when children remain.
  */
 export const submissionComment = pgTable(
   "submissionComment",
@@ -230,13 +233,50 @@ export const submissionComment = pgTable(
     userId: text("userId")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    /** Null = root comment. Self-FK is declared below. */
+    parentId: text("parentId"),
+    deletedAt: timestamp("deletedAt", { mode: "date" }),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" })
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("submissionComment_submissionId_idx").on(table.submissionId)],
+  (table) => [
+    index("submissionComment_submissionId_idx").on(table.submissionId),
+    index("submissionComment_parentId_idx").on(table.parentId),
+    foreignKey({
+      columns: [table.parentId],
+      foreignColumns: [table.id],
+      name: "submissionComment_parentId_fk",
+    }).onDelete("cascade"),
+  ],
+);
+
+/**
+ * Emoji reactions on a comment. One row per (comment, user, emoji).
+ */
+export const commentReaction = pgTable(
+  "commentReaction",
+  {
+    id: text("id").primaryKey(),
+    commentId: text("commentId")
+      .notNull()
+      .references(() => submissionComment.id, { onDelete: "cascade" }),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    emoji: text("emoji").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("commentReaction_commentId_idx").on(table.commentId),
+    uniqueIndex("commentReaction_unique").on(
+      table.commentId,
+      table.userId,
+      table.emoji,
+    ),
+  ],
 );
 
 /**
@@ -336,7 +376,7 @@ export const userPreference = pgTable("userPreference", {
 
 export const submissionCommentRelations = relations(
   submissionComment,
-  ({ one }) => ({
+  ({ one, many }) => ({
     submission: one(submission, {
       fields: [submissionComment.submissionId],
       references: [submission.id],
@@ -345,8 +385,26 @@ export const submissionCommentRelations = relations(
       fields: [submissionComment.userId],
       references: [user.id],
     }),
+    parent: one(submissionComment, {
+      fields: [submissionComment.parentId],
+      references: [submissionComment.id],
+      relationName: "comment_replies",
+    }),
+    replies: many(submissionComment, { relationName: "comment_replies" }),
+    reactions: many(commentReaction),
   }),
 );
+
+export const commentReactionRelations = relations(commentReaction, ({ one }) => ({
+  comment: one(submissionComment, {
+    fields: [commentReaction.commentId],
+    references: [submissionComment.id],
+  }),
+  user: one(user, {
+    fields: [commentReaction.userId],
+    references: [user.id],
+  }),
+}));
 
 export const submissionVoteRelations = relations(submissionVote, ({ one }) => ({
   submission: one(submission, {
