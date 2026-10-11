@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { auth } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 import { countSubmissions, listSubmissions } from "@/db/submissions";
 import {
   countVotesBySubmission,
@@ -16,11 +14,9 @@ import DashboardSubmissionsSection from "@/components/dashboard/DashboardSubmiss
 import type { DashboardSummary } from "@/hooks/use-dashboard-data";
 
 export default async function DashboardPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/auth/signin");
+  const { id: userId, role } = await requireUser();
 
-  const userId = session.user.id;
-  const isAdmin = session.user.role === "admin";
+  const isAdmin = role === "admin";
   const scope = isAdmin ? {} : { userId };
 
   const [total, open, bugs, features, submissions, unread] = await Promise.all([

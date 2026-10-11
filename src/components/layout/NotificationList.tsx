@@ -13,6 +13,7 @@ import {
   useMarkNotificationRead,
   useNotifications,
 } from "@/hooks/use-notifications";
+import { useIsAdmin } from "@/hooks/use-session";
 import type { Notification } from "@/db/types";
 
 /** A notification row joined with enough of its submission to render a title. */
@@ -97,8 +98,9 @@ export function NotificationRow({
  * notifications cache rather than a local copy, so this page and the bell badge
  * can never report different unread counts.
  */
-export default function NotificationList({ isAdmin = false }: { isAdmin?: boolean }) {
+export default function NotificationList() {
   const { toast } = useToastStack();
+  const isAdmin = useIsAdmin();
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
   const notifications = useNotifications();

@@ -1,6 +1,7 @@
 "use client";
 
-import { useSession, signOut } from "@/lib/auth-client";
+import { signOut } from "@/lib/auth-client";
+import { useCurrentUser, useIsAdmin } from "@/hooks/use-session";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, LayoutDashboard, Settings, ShieldCheck } from "lucide-react";
@@ -13,11 +14,11 @@ import { useTheme } from "@/components/theme/ThemeProvider";
 import { UserMenu } from "@/components/arc/user-menu/user-menu";
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const user = useCurrentUser();
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const isAdmin = session?.user?.role === "admin";
+  const isAdmin = useIsAdmin();
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -80,12 +81,12 @@ export default function Navbar() {
             <ThemeToggle />
           </div>
 
-          {session?.user && (
+          {user && (
             <UserMenu
               user={{
-                name: session.user.name,
-                email: session.user.email,
-                avatarSrc: session.user.image ?? undefined,
+                name: user.name,
+                email: user.email,
+                avatarSrc: user.image ?? undefined,
                 ...(isAdmin ? { plan: "Admin" } : {}),
               }}
               theme={theme}

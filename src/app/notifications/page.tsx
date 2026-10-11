@@ -1,21 +1,17 @@
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { auth } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 import { countUnreadNotifications, listNotifications } from "@/db/notifications";
 import { queryKeys, getQueryClient } from "@/lib/query-client";
 import Navbar from "@/components/shared/Navbar";
 import NotificationList from "@/components/layout/NotificationList";
 
 export default async function NotificationsPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/auth/signin");
+  const user = await requireUser();
 
-  const isAdmin = session.user.role === "admin";
-  const notifications = await listNotifications(session.user.id);
+  const notifications = await listNotifications(user.id);
 
   // Counted server side so the header agrees with the list on first paint.
-  const unread = await countUnreadNotifications(session.user.id);
+  const unread = await countUnreadNotifications(user.id);
 
   /*
    * The rows are written into the same cache entry the bell reads, so the page
@@ -54,7 +50,7 @@ export default async function NotificationsPage() {
         </div>
 
         <HydrationBoundary state={state}>
-          <NotificationList isAdmin={isAdmin} />
+          <NotificationList />
         </HydrationBoundary>
       </main>
     </div>

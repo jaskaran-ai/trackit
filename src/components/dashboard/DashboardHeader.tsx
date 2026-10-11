@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { useSession } from "@/lib/auth-client";
+import { useCurrentUser } from "@/hooks/use-session";
 import { PRIMARY_LINK_CLASS } from "@/components/shared/linkButton";
 
 export default function DashboardHeader() {
-  const { data: session } = useSession();
-  const firstName = session?.user.name?.split(" ")[0] ?? "there";
+  const firstName = useCurrentUser()?.name?.split(" ")[0] ?? "there";
 
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-4 sm:mb-6">

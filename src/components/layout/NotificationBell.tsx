@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck } from "lucide-react";
-import { useSession } from "@/lib/auth-client";
+import { useIsAdmin, useCurrentUser } from "@/hooks/use-session";
 import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import {
   Popover,
@@ -28,9 +28,9 @@ import {
 const PREVIEW_LIMIT = 10;
 
 export default function NotificationBell() {
-  const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "admin";
-  const signedIn = Boolean(session?.user);
+  const user = useCurrentUser();
+  const isAdmin = useIsAdmin();
+  const signedIn = Boolean(user);
 
   const { toast } = useToastStack();
   const [open, setOpen] = useState(false);
@@ -65,7 +65,7 @@ export default function NotificationBell() {
     });
   };
 
-  if (!session?.user) return null;
+  if (!user) return null;
 
   const submissionHref = (submissionId: string) =>
     isAdmin ? `/admin/submission/${submissionId}` : `/submission/${submissionId}`;
