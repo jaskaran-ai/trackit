@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { History } from "lucide-react";
 import { Timeline, type TimelineEvent } from "@/components/arc/timeline/timeline";
 import { Button } from "@/components/arc/button/button";
@@ -10,6 +10,7 @@ import { STATUS_LABELS } from "@/lib/labels";
 import { PriorityBadge, StatusBadge } from "@/components/shared/Badges";
 import type { Priority, SubmissionStatus } from "@/db/types";
 import { useSubmissionHistory, type HistoryEntry } from "@/hooks/use-status-history";
+import { useClock } from "@/hooks/use-clock";
 
 /** Fields that only carry a payload in toValue (no before/after pair). */
 const EVENT_FIELDS = new Set(["created", "archived", "restored"]);
@@ -100,14 +101,8 @@ export default function StatusHistory({ submissionId }: { submissionId: string }
   const historyQuery = useSubmissionHistory(submissionId);
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = historyQuery;
   const entries = historyQuery.data?.pages.flatMap((page) => page.items);
-  const [now, setNow] = useState<number | null>(null);
+  const now = useClock(CLOCK_TICK_MS);
   const sentinelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS);
-    return () => clearInterval(timer);
-  }, []);
 
   // Fetch the next page once the sentinel below the timeline scrolls into view.
   // Re-created after each fetch, so a short page keeps loading until it fills the viewport.

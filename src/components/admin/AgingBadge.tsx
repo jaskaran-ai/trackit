@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { Badge, type BadgeTone } from "@/components/arc/badge/badge";
+import { useClock } from "@/hooks/use-clock";
 import type { SubmissionStatus } from "@/db/types";
 
 const RESOLVED: SubmissionStatus[] = ["COMPLETE", "CANCELED"];
@@ -42,11 +42,8 @@ export default function AgingBadge({
    * it, and the badge stays absent for that one frame, exactly as it does for a
    * resolved row.
    */
-  const [now, setNow] = useState<number | null>(null);
-
-  useEffect(() => {
-    setNow(Date.now());
-  }, []);
+  // Read once after mount, like the table it sits in: a row never needs its own timer.
+  const now = useClock(null);
 
   if (isResolved || now === null) return null;
 
