@@ -8,9 +8,13 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "db:push": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:studio": "drizzle-kit studio",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:baseline": "node scripts/db-baseline.mjs",
+    "db:push": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit push",
+    "db:pull": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit pull",
+    "db:check": "drizzle-kit check",
+    "db:studio": "NODE_TLS_REJECT_UNAUTHORIZED=0 drizzle-kit studio",
     "auth:schema": "pnpm dlx auth@1.7.7 generate --config src/lib/auth.ts --adapter drizzle --dialect postgresql --output src/db/auth-schema.generated.ts -y"
   },
   "dependencies": {
