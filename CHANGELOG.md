@@ -12,6 +12,8 @@
 
 ### Changed
 
+- Drizzle schema split from monolithic `src/db/schema.ts` into domain modules under `src/db/schema/` (auth, submissions, comments, assignees, and related tables). Public imports stay `@/db/schema` and `./schema`; `drizzle.config.ts` points at `src/db/schema/index.ts`.
+- Database scripts: `pnpm db:migrate` (auto-baselines when the DB was created with `db:push`, then applies pending SQL), `pnpm db:baseline`, `pnpm db:check`, `pnpm db:pull`. Applied migration `0003_submission_assignees` to the linked database.
 - Admin board cards: the Move dropdown trigger is smaller (24px tall, extra-small text). Styled in `src/app/admin/KanbanBoard.module.css`.
 
 ### Reverted
