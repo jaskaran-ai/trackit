@@ -20,6 +20,19 @@
 - Database scripts: `pnpm db:migrate` (auto-baselines when the DB was created with `db:push`, then applies pending SQL), `pnpm db:baseline`, `pnpm db:check`, `pnpm db:pull`. Applied migration `0003_submission_assignees` to the linked database.
 - Admin board cards: the Move dropdown trigger is smaller (24px tall, extra-small text). Styled in `src/app/admin/KanbanBoard.module.css`.
 
+### Changed
+
+- `/auth/signin` and `/submit` pages are server components again. The hero, copy, and layout render on the server (`src/app/auth/signin/page.tsx`, `src/app/submit/page.tsx`). The interactive parts move to colocated client components: `GoogleSignInButton.tsx` (sign-in state and the Google button) and `SubmitForm.tsx` (form state, duplicate check, upload, and submit). Both routes stay prerendered (static).
+
+### Fixed
+
+- Lint runs again. `typescript` is pinned to `~6.0.3` and `eslint` to `~9.39.5`. typescript-eslint and eslint-plugin-react do not support TypeScript 7 or ESLint 10 yet, and the lint crashed on both.
+- Lint errors cleared (16 to 0). Store reads from `localStorage` and `matchMedia` go through `useSyncExternalStore` (new `src/lib/local-storage-store.ts`), which replaces the mount-effect `setState` calls in the theme provider, dashboard list view, and submission search. Clock reads use `src/hooks/use-clock.ts`. The submit page clears its duplicate hints in the title change handler. The admin table resets its page during render when filters change. Notification icons are elements, not components picked during render.
+- Admin page (`src/app/admin/page.tsx`) renders its shell without awaiting stats, submissions, users, or votes on the server. Each section loads through the shared query cache, so navigating from the dashboard no longer waits on the whole admin payload.
+- `window.location.href` for the CSV export and sign-out now carries an eslint-disable with the reason (download, and a hard reload that clears the client cache).
+- Remaining lint warnings cleared (6 to 0). Avatars on the admin detail, submission, settings, and archived views, plus the attachment thumbnail, use `next/image` with fixed sizes. Attachment thumbnails are `unoptimized` because they are served from uploadthing. The attachment lightbox keeps `<img>` on purpose, with an eslint-disable and the reason, because its intrinsic size is unknown.
+- Unused imports and variables removed. `@typescript-eslint/no-unused-vars` ignores rest siblings and `_`-prefixed names (`eslint.config.mjs`).
+
 ### Reverted
 
 - Admin Board view is back on the custom `KanbanBoard` (restored from git HEAD). The Arc Pro `kanban-board` block is no longer used, and its files were removed. The block's card couldn't render the type and priority badges, View link, and Move menu.
