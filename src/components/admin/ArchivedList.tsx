@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { RotateCcw, Trash2, Inbox } from "lucide-react";
 import { StatusBadge, TypeBadge, ProjectBadge } from "@/components/shared/Badges";
@@ -43,9 +44,11 @@ function ArchivedRow({
         </div>
         <div className="mt-1.5 flex items-center gap-1.5">
           {submission.user.image ? (
-            <img
+            <Image
               src={submission.user.image}
               alt={submission.user.name}
+              width={16}
+              height={16}
               className="h-4 w-4 rounded-full"
             />
           ) : (

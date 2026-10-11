@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -87,9 +88,11 @@ export default async function SubmissionDetailPage({
 
               <div className="flex items-center gap-2.5 pt-4 border-t border-[var(--border-subtle)]">
                 {submission.user.image ? (
-                  <img
+                  <Image
                     src={submission.user.image}
                     alt={submission.user.name}
+                    width={28}
+                    height={28}
                     className="w-7 h-7 rounded-full"
                   />
                 ) : (

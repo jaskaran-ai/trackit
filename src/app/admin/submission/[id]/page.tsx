@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -100,9 +101,11 @@ export default async function AdminSubmissionDetailPage({
             {/* Reporter info */}
             <div className="flex items-center gap-2.5 py-3 border-t border-b border-[var(--border-subtle)] mb-3">
               {submission.user.image ? (
-                <img
+                <Image
                   src={submission.user.image}
                   alt={submission.user.name}
+                  width={32}
+                  height={32}
                   className="w-8 h-8 rounded-full"
                 />
               ) : (

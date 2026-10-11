@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
-import { Download, FileText, Film } from "lucide-react";
+import { Download, FileText } from "lucide-react";
 import { formatBytes } from "@/lib/utils";
 import AttachmentLightbox from "@/components/shared/AttachmentLightbox";
 import type { Attachment } from "@/types";
@@ -26,9 +27,12 @@ function AttachmentRow({
         className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-l-control px-2.5 py-2 text-left"
       >
         {isImage ? (
-          <img
+          <Image
             src={att.fileUrl}
             alt=""
+            width={32}
+            height={32}
+            unoptimized
             className="h-8 w-8 shrink-0 rounded-control object-cover"
             loading="lazy"
           />

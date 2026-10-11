@@ -92,6 +92,7 @@ export default function AttachmentLightbox({
 
           <figure className="flex min-w-0 flex-1 flex-col items-center gap-2.5">
             {current.mimeType.startsWith("image/") ? (
+              // eslint-disable-next-line @next/next/no-img-element -- user uploads of unknown size, shown at up to 70vh; next/image would need intrinsic dimensions we don't store
               <img
                 src={current.fileUrl}
                 alt={current.fileName}

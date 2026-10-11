@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -58,9 +59,11 @@ export default async function SettingsPage() {
 
             <div className="flex items-center gap-3">
               {profile.image ? (
-                <img
+                <Image
                   src={profile.image}
                   alt={profile.name}
+                  width={48}
+                  height={48}
                   className="w-12 h-12 rounded-full shrink-0"
                 />
               ) : (
