@@ -5,6 +5,10 @@
 ### Added
 
 - Admin board move feedback. The column a card is dragged over gets an animated border beam, modeled on Arc's `file-dropzone` glow. A card that lands, by drag or the Move menu, flashes its border with an accent ring. Both are in `src/app/admin/KanbanBoard.module.css` and respect `prefers-reduced-motion`.
+- Multiple assignees per submission. New `submissionAssignee` table with a unique `(submissionId, userId)` pair. Migration in `drizzle/0003_submission_assignees.sql`, not applied.
+- `submissions.setAssignees` (admin only), exposed as `PUT /api/submissions/[id]/assignees` with body `{ userIds }`. `get` and the lean list return an `assignees` array.
+- Detail page: assignee picker (saves on each change, reverts on failure).
+- Kanban card: stacked assignee avatars beside the vote button, using Arc's `avatar-group` (installed to `src/components/arc/avatar-group/`).
 
 ### Changed
 
