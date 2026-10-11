@@ -6,12 +6,14 @@ import { ChevronRight, GripVertical } from "lucide-react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { TypeBadge, PriorityBadge, StatusBadge } from "@/components/shared/Badges";
 import { Avatar } from "@/components/arc/avatar/avatar";
+import { AvatarGroup } from "@/components/arc/avatar-group/avatar-group";
 import { DropdownMenu } from "@/components/arc/dropdown-menu/dropdown-menu";
 import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import AgingBadge from "@/components/admin/AgingBadge";
 import VoteButton from "@/components/shared/VoteButton";
 import { PROJECT_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { SUBMISSION_STATUSES, type SubmissionStatus } from "@/db/types";
+import type { SubmissionAssignee } from "@/db/assignees";
 import type { SubmissionWithUser } from "@/types";
 import styles from "./KanbanBoard.module.css";
 
@@ -21,6 +23,23 @@ type KanbanSubmission = SubmissionWithUser & {
   voteCount?: number;
   hasVoted?: boolean;
 };
+
+/** Assignees as overlapping avatars. Renders nothing when nobody is assigned. */
+function AssigneeStack({ people }: { people: SubmissionAssignee[] }) {
+  if (people.length === 0) return null;
+
+  return (
+    <AvatarGroup
+      size="sm"
+      max={3}
+      label="Assignees"
+      members={people.map((person) => ({
+        name: person.name,
+        src: person.image ?? undefined,
+      }))}
+    />
+  );
+}
 
 function KanbanCard({
   submission,
@@ -110,14 +129,17 @@ function KanbanCard({
               status={submission.status}
               resolvedAt={submission.resolvedAt}
             />
-            {submission.type === "FEATURE" && (
-              <VoteButton
-                submissionId={submission.id}
-                initialCount={submission.voteCount}
-                initialHasVoted={submission.hasVoted}
-                size="sm"
-              />
-            )}
+            <div className="flex items-center gap-2">
+              <AssigneeStack people={submission.assignees ?? []} />
+              {submission.type === "FEATURE" && (
+                <VoteButton
+                  submissionId={submission.id}
+                  initialCount={submission.voteCount}
+                  initialHasVoted={submission.hasVoted}
+                  size="sm"
+                />
+              )}
+            </div>
           </div>
         </article>
       )}

@@ -6,6 +6,7 @@ import { getSubmissionById } from "@/db/submissions";
 import { listComments } from "@/db/comments";
 import { listHistory } from "@/db/history";
 import { getVoteSummary } from "@/db/votes";
+import { listAssigneesBySubmission } from "@/db/assignees";
 import { queryKeys, getQueryClient } from "@/lib/query-client";
 import Navbar from "@/components/shared/Navbar";
 import { StatusBadge, TypeBadge, PriorityBadge } from "@/components/shared/Badges";
@@ -13,6 +14,7 @@ import StatusHistory from "@/components/submission/StatusHistory";
 import CommentsSection from "@/components/submission/CommentsSection";
 import VoteButton from "@/components/shared/VoteButton";
 import AdminStatusControls from "./AdminStatusControls";
+import AdminAssigneePicker from "./AdminAssigneePicker";
 import { formatDate, formatBytes } from "@/lib/utils";
 import {
   ChevronLeft,
@@ -41,13 +43,15 @@ export default async function AdminSubmissionDetailPage({
 
   if (!submission) notFound();
 
-  const [comments, history, vote] = await Promise.all([
+  const [comments, history, vote, assigneeMap] = await Promise.all([
     listComments(id),
     listHistory(id),
     submission.type === "FEATURE"
       ? getVoteSummary(id, session.user.id)
       : Promise.resolve(null),
+    listAssigneesBySubmission([id]),
   ]);
+  const assignees = assigneeMap.get(id) ?? [];
 
   const queryClient = getQueryClient();
   queryClient.setQueryData(queryKeys.comments(id), comments);
@@ -135,6 +139,10 @@ export default async function AdminSubmissionDetailPage({
 
             {/* Admin controls */}
             <AdminStatusControls submission={submission} />
+
+            <div className="mt-4 max-w-sm">
+              <AdminAssigneePicker submissionId={submission.id} assignees={assignees} />
+            </div>
           </div>
 
           {/* Description */}
