@@ -13,6 +13,9 @@ import DashboardMetricsSection from "@/components/dashboard/DashboardMetricsSect
 import DashboardSubmissionsSection from "@/components/dashboard/DashboardSubmissionsSection";
 import type { DashboardSummary } from "@/hooks/use-dashboard-data";
 
+// Per-user data (session + scoped DB queries) — never statically prerender.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const { id: userId, role } = await requireUser();
 
