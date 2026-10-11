@@ -30,6 +30,15 @@ function GoogleMark() {
   );
 }
 
+/* The proxy parks signed-out users here with ?next=<path>. Only same-site
+   paths qualify: the query string is attacker-controllable, so it can never
+   become a redirect off this origin. */
+function safeNextPath() {
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/dashboard";
+  return next;
+}
+
 export default function GoogleSignInButton() {
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +46,7 @@ export default function GoogleSignInButton() {
     setLoading(true);
     await signIn.social({
       provider: "google",
-      callbackURL: "/dashboard",
+      callbackURL: safeNextPath(),
     });
   }
 

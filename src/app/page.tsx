@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 
+/*
+ * The proxy already sends signed-out visitors to the sign-in screen and leaves
+ * signed-in ones here, so this only needs to pick a destination. If the proxy
+ * ever misses a request, /dashboard still routes a signed-out user correctly
+ * through requireUser().
+ */
 export default async function HomePage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (session) {
-    redirect("/dashboard");
-  } else {
-    redirect("/auth/signin");
-  }
+  redirect("/dashboard");
 }
