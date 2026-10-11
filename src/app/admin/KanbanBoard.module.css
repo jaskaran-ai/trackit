@@ -1,0 +1,81 @@
+/*
+ * Drop target. While a card is over a column, a light beam travels the column's
+ * edge, the same glow Arc's file-dropzone draws around a file drag.
+ */
+@property --beam {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.dropTarget {
+  position: relative;
+  isolation: isolate;
+}
+
+.dropTarget::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--beam),
+      transparent 0deg,
+      var(--accent) 50deg,
+      transparent 110deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+  animation:
+    beam-in var(--duration-standard) var(--ease-standard) both,
+    beam 2.4s linear infinite;
+}
+
+@keyframes beam {
+  to {
+    --beam: 360deg;
+  }
+}
+
+@keyframes beam-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* A card that just landed in a column flashes its border and rings out. */
+.landed {
+  animation: land var(--duration-standard) var(--ease-standard) both;
+}
+
+@keyframes land {
+  from {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 25%, transparent);
+  }
+}
+
+/* The shared dropdown sets its own trigger size, so the card's Move menu shrinks its trigger from here. Menu items keep their size. */
+.moveMenu button {
+  min-height: 24px;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.moveMenu button svg {
+  width: 12px;
+  height: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropTarget::after {
+    animation: none;
+    background: var(--accent);
+  }
+
+  .landed {
+    animation: none;
+  }
+}

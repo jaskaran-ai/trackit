@@ -13,6 +13,7 @@ import VoteButton from "@/components/shared/VoteButton";
 import { PROJECT_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { SUBMISSION_STATUSES, type SubmissionStatus } from "@/db/types";
 import type { SubmissionWithUser } from "@/types";
+import styles from "./KanbanBoard.module.css";
 
 // Submissions arrive with vote state attached on the server, so a card's vote
 // button renders from initial values instead of fetching each one on mount.
@@ -25,10 +26,12 @@ function KanbanCard({
   submission,
   onStatusChange,
   index,
+  landed,
 }: {
   submission: KanbanSubmission;
   onStatusChange: (id: string, status: SubmissionStatus) => void;
   index: number;
+  landed: boolean;
 }) {
   const others = SUBMISSION_STATUSES.filter((s) => s !== submission.status);
 
@@ -38,11 +41,10 @@ function KanbanCard({
         <article
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={`space-y-2.5 rounded-control border bg-surface p-2.5 ${
-            snapshot.isDragging
-              ? "border-accent shadow-lg"
-              : "border-[var(--border-subtle)] hover:border-border"
-          }`}
+          className={`space-y-2.5 rounded-control border bg-surface p-2.5 ${snapshot.isDragging
+            ? "border-accent shadow-lg"
+            : "border-[var(--border-subtle)] hover:border-border"
+            } ${landed ? styles.landed : ""}`}
         >
           <div className="flex items-center justify-between gap-1">
             <div className="flex min-w-0 items-center gap-2">
@@ -90,13 +92,15 @@ function KanbanCard({
 
             {/* The keyboard and touch path to a move. Drag is the shortcut, not
                 the only way, so the menu carries every other status. */}
-            <DropdownMenu
-              label="Move"
-              items={others.map((status) => ({
-                label: STATUS_LABELS[status],
-                onSelect: () => onStatusChange(submission.id, status),
-              }))}
-            />
+            <div className={styles.moveMenu}>
+              <DropdownMenu
+                label="Move"
+                items={others.map((status) => ({
+                  label: STATUS_LABELS[status],
+                  onSelect: () => onStatusChange(submission.id, status),
+                }))}
+              />
+            </div>
           </div>
 
           <div className="flex items-center justify-between gap-2 pt-0.5">
@@ -137,9 +141,11 @@ export default function KanbanBoard({
 }) {
   const { toast } = useToastStack();
   const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [landedId, setLandedId] = useState<string | null>(null);
 
   async function handleStatusChange(id: string, newStatus: SubmissionStatus) {
     const previous = submissions;
+    setLandedId(id);
     setSubmissions((all) =>
       all.map((s) => (s.id === id ? { ...s, status: newStatus } : s)),
     );
@@ -194,9 +200,8 @@ export default function KanbanBoard({
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`min-h-[200px] space-y-2 rounded-control p-1 transition-colors ${
-                      snapshot.isDraggingOver ? "bg-surface-muted" : ""
-                    }`}
+                    className={`min-h-[200px] space-y-2 rounded-control p-1 transition-colors ${snapshot.isDraggingOver ? `bg-surface-muted ${styles.dropTarget}` : ""
+                      }`}
                   >
                     {cards.length === 0 ? (
                       <p className="rounded-control border border-dashed border-[var(--border-subtle)] py-6 text-center text-xs text-muted">
@@ -209,6 +214,7 @@ export default function KanbanBoard({
                           submission={s}
                           onStatusChange={handleStatusChange}
                           index={index}
+                          landed={landedId === s.id}
                         />
                       ))
                     )}
