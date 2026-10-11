@@ -10,6 +10,7 @@ import {
   countSubmissions,
   createSubmission,
   DEFAULT_LIST_LIMIT,
+  getSubmissionAccessRow,
   getSubmissionById,
   hardDeleteSubmission,
   listAttachmentsForSubmission,
@@ -19,6 +20,11 @@ import {
   updateSubmission,
 } from "@/db/submissions";
 import { countVotesBySubmission, listVotedSubmissionIds } from "@/db/votes";
+import {
+  findMissingUserIds,
+  listAssigneesBySubmission,
+  setSubmissionAssignees,
+} from "@/db/assignees";
 import type { Priority, SubmissionStatus } from "@/db/types";
 import {
   PRIORITIES,
@@ -169,7 +175,8 @@ export const submissionsRouter = {
         throw forbidden();
       }
 
-      return submission;
+      const assignees = (await listAssigneesBySubmission([input.id])).get(input.id) ?? [];
+      return { ...submission, assignees };
     }),
 
   update: protectedProcedure
@@ -200,6 +207,29 @@ export const submissionsRouter = {
       if (!submission) throw notFound();
 
       return submission;
+    }),
+
+  /** Replaces the full assignee list. Admin only; the client sends every id it wants kept. */
+  setAssignees: protectedProcedure
+    .route({ method: "PUT", path: "/submissions/{id}/assignees" })
+    .input(
+      z.object({
+        id: z.string(),
+        userIds: z.array(z.string()).max(50),
+      }),
+    )
+    .handler(async ({ input, context }) => {
+      if (context.auth.user.role !== "admin") throw forbidden();
+
+      if (!(await getSubmissionAccessRow(input.id))) throw notFound();
+
+      const missing = await findMissingUserIds(input.userIds);
+      if (missing.length > 0) throw badRequest("Unknown user");
+
+      await setSubmissionAssignees(input.id, input.userIds);
+
+      const assignees = (await listAssigneesBySubmission([input.id])).get(input.id) ?? [];
+      return { assignees };
     }),
 
   remove: protectedProcedure
