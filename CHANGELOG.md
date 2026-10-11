@@ -12,6 +12,10 @@
 
 ### Changed
 
+- Admin bulk-actions bar: controls share one row height and bottom-align, so the status and priority selects, Archive, Delete, and the "1 selected" pill line up. The selects are labelled "Status" and "Priority" with "Set status" and "Set priority" placeholders, and the empty option that Radix rejects is removed. Code: `src/components/admin/BulkActions.tsx`.
+- Admin submissions table has an Assignees column showing the assignee avatars (Arc `AvatarGroup`, up to 3 then +N), or "Unassigned" when empty. Code: `src/app/admin/AdminTable.tsx`.
+- Submission history loads 6 entries at a time and fetches the next page when the list scrolls into view. The API is keyset-paginated (`GET /api/submissions/[id]/history?limit=&cursor=`) and returns `{ items, nextCursor }`. Server pages seed only the first page. A Load more button under the timeline (Arc `Button`) fetches the next page as a fallback to scrolling. Code: `src/db/history.ts`, `src/orpc/routers/history.ts`, `src/hooks/use-status-history.ts`, `src/components/submission/StatusHistory.tsx`.
+- Submission assignee picker rebuilt on Arc UI. Changes are drafted in a popover with avatars and saved with an explicit Save button, instead of saving on every click. Reset discards the draft. Uses Arc `Popover`, `Avatar`, `AvatarGroup`, and `Button` in `src/app/admin/submission/[id]/AdminAssigneePicker.tsx`.
 - Drizzle schema split from monolithic `src/db/schema.ts` into domain modules under `src/db/schema/` (auth, submissions, comments, assignees, and related tables). Public imports stay `@/db/schema` and `./schema`; `drizzle.config.ts` points at `src/db/schema/index.ts`.
 - Database scripts: `pnpm db:migrate` (auto-baselines when the DB was created with `db:push`, then applies pending SQL), `pnpm db:baseline`, `pnpm db:check`, `pnpm db:pull`. Applied migration `0003_submission_assignees` to the linked database.
 - Admin board cards: the Move dropdown trigger is smaller (24px tall, extra-small text). Styled in `src/app/admin/KanbanBoard.module.css`.
