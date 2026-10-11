@@ -1,9 +1,12 @@
 import type { Attachment, Submission, User } from "@/db/types";
+import type { SubmissionAssignee } from "@/db/assignees";
 
 export type SubmissionWithUser = Submission & {
   user: Pick<User, "id" | "name" | "email" | "image">;
   attachments: Attachment[];
   _count?: { attachments: number };
+  /** Present on list and detail responses. */
+  assignees?: SubmissionAssignee[];
 };
 
 export type SessionUser = {

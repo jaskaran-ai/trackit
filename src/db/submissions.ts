@@ -19,6 +19,7 @@ import {
   submissionHistory,
   user,
 } from "./schema";
+import { listAssigneesBySubmission } from "./assignees";
 import { logFieldChanges, logHistory } from "./history";
 import { createNotification } from "./notifications";
 import type { Priority, Project, SubmissionStatus, SubmissionType } from "./types";
@@ -175,13 +176,17 @@ export async function listSubmissions(filters: SubmissionFilters = {}) {
   });
 
   const ids = rows.map((row) => row.id);
-  const attachmentCounts = await countAttachmentsBySubmission(ids);
+  const [attachmentCounts, assignees] = await Promise.all([
+    countAttachmentsBySubmission(ids),
+    listAssigneesBySubmission(ids),
+  ]);
 
   return rows.map((row) => ({
     ...row,
     description: "",
     attachments: [] as [],
     _count: { attachments: attachmentCounts.get(row.id) ?? 0 },
+    assignees: assignees.get(row.id) ?? [],
   }));
 }
 

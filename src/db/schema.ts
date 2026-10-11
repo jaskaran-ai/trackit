@@ -176,6 +176,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
   comments: many(submissionComment),
   commentReactions: many(commentReaction),
   votes: many(submissionVote),
+  assignments: many(submissionAssignee),
   savedViews: many(savedView),
   notifications: many(notification),
   preference: one(userPreference),
@@ -203,6 +204,7 @@ export const submissionRelations = relations(submission, ({ one, many }) => ({
   attachments: many(attachment),
   comments: many(submissionComment),
   votes: many(submissionVote),
+  assignees: many(submissionAssignee),
   history: many(submissionHistory),
   notifications: many(notification),
 }));
@@ -298,6 +300,30 @@ export const submissionVote = pgTable(
   (table) => [
     index("submissionVote_submissionId_idx").on(table.submissionId),
     index("submissionVote_unique").on(table.submissionId, table.userId),
+  ],
+);
+
+/**
+ * Who works on a submission. Several users can be assigned to one submission.
+ * The submitter (`submission.userId`) is not an assignee unless added here.
+ * The unique index stops the same person being assigned twice.
+ */
+export const submissionAssignee = pgTable(
+  "submissionAssignee",
+  {
+    id: text("id").primaryKey(),
+    submissionId: text("submissionId")
+      .notNull()
+      .references(() => submission.id, { onDelete: "cascade" }),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("submissionAssignee_submissionId_idx").on(table.submissionId),
+    index("submissionAssignee_userId_idx").on(table.userId),
+    uniqueIndex("submissionAssignee_unique").on(table.submissionId, table.userId),
   ],
 );
 
@@ -413,6 +439,17 @@ export const submissionVoteRelations = relations(submissionVote, ({ one }) => ({
   }),
   user: one(user, {
     fields: [submissionVote.userId],
+    references: [user.id],
+  }),
+}));
+
+export const submissionAssigneeRelations = relations(submissionAssignee, ({ one }) => ({
+  submission: one(submission, {
+    fields: [submissionAssignee.submissionId],
+    references: [submission.id],
+  }),
+  user: one(user, {
+    fields: [submissionAssignee.userId],
     references: [user.id],
   }),
 }));
