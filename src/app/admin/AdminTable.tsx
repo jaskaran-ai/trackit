@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Download, Paperclip } from "lucide-react";
 import {
@@ -112,10 +112,15 @@ export default function AdminTable({ submissions }: { submissions: TableRow[] })
   );
 
   /* Any change to the result set can leave the current page past the end, which
-     is why the page resets on the filters but not on the sort. */
-  useEffect(() => {
+     is why the page resets on the filters but not on the sort. Tracking the
+     filter key in state and resetting during render avoids an effect that
+     sets state after every filter change. */
+  const filterKey = [search, filterType, filterStatus, filterPriority, filterProject].join("|");
+  const [pageFilterKey, setPageFilterKey] = useState(filterKey);
+  if (pageFilterKey !== filterKey) {
+    setPageFilterKey(filterKey);
     setPage(0);
-  }, [search, filterType, filterStatus, filterPriority, filterProject]);
+  }
 
   const currentFilters: SavedViewFilters = useMemo(
     () => ({
@@ -150,6 +155,9 @@ export default function AdminTable({ submissions }: { submissions: TableRow[] })
     if (filterType !== ALL) params.set("type", filterType);
     if (filterPriority !== ALL) params.set("priority", filterPriority);
     if (filterProject !== ALL) params.set("project", filterProject);
+    // A plain navigation to the export route is what makes the browser download
+    // the CSV attachment. `redirect()` and `<Link>` are for Next.js pages only.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- CSV download, not an in-app page
     window.location.href = `/api/admin/export?${params.toString()}`;
   }
 
