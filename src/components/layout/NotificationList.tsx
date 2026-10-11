@@ -20,10 +20,16 @@ export type NotificationWithSubmission = Notification & {
   submission: { id: string; title: string; type: string } | null;
 };
 
-export function notificationIcon(type: string) {
-  if (type === "comment") return MessageSquare;
-  if (type === "submission_updated") return RefreshCw;
-  return Bell;
+/**
+ * Returns the icon element for a type. It returns an element rather than a
+ * component reference, because React treats a component chosen during render as
+ * a new component on every render.
+ */
+export function notificationIcon(type: string, className: string) {
+  const props = { size: 14, "aria-hidden": true, className };
+  if (type === "comment") return <MessageSquare {...props} />;
+  if (type === "submission_updated") return <RefreshCw {...props} />;
+  return <Bell {...props} />;
 }
 
 /**
@@ -40,7 +46,6 @@ export function NotificationRow({
   href?: string;
   onSelect?: () => void;
 }) {
-  const Icon = notificationIcon(item.type);
   const unread = !item.read;
   const clickable = Boolean(href && item.submissionId && onSelect);
 
@@ -48,11 +53,7 @@ export function NotificationRow({
     <>
       {/* Unread is carried by the row's weight and the dot rather than a
           coloured tile, so a notification type is never told apart by hue. */}
-      <Icon
-        size={14}
-        aria-hidden
-        className={cn("mt-0.5 shrink-0", unread ? "text-accent" : "text-muted")}
-      />
+      {notificationIcon(item.type, cn("mt-0.5 shrink-0", unread ? "text-accent" : "text-muted"))}
 
       <div className="min-w-0 flex-1">
         <p
@@ -104,7 +105,10 @@ export default function NotificationList({ isAdmin = false }: { isAdmin?: boolea
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
 
-  const items = notifications.data?.notifications ?? [];
+  const items = useMemo(
+    () => notifications.data?.notifications ?? [],
+    [notifications.data?.notifications],
+  );
   const unread = notifications.data?.unread ?? 0;
 
   const visible = useMemo(
