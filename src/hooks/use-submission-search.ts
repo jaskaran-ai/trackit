@@ -43,9 +43,10 @@ export function useSubmissionSearch(query: string) {
   useEffect(() => {
     const trimmed = query.trim();
 
+    // Short input never schedules a lookup. `searchEnabled` below hides the
+    // previous results, so there is nothing to clear here.
     if (trimmed.length < SUBMISSION_SEARCH_MIN_CHARS) {
       controllerRef.current = null;
-      setDebouncedQuery("");
       return;
     }
 
@@ -63,7 +64,9 @@ export function useSubmissionSearch(query: string) {
   }, [query]);
 
   const trimmed = debouncedQuery.trim();
-  const searchEnabled = trimmed.length >= SUBMISSION_SEARCH_MIN_CHARS;
+  const searchEnabled =
+    trimmed.length >= SUBMISSION_SEARCH_MIN_CHARS &&
+    query.trim().length >= SUBMISSION_SEARCH_MIN_CHARS;
 
   const searchQuery = useQuery({
     queryKey: queryKeys.submissions.search(searchEnabled ? trimmed : ""),
