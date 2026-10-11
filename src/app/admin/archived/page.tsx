@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireAdmin } from "@/lib/session";
 import { listSubmissions } from "@/db/submissions";
 import Navbar from "@/components/shared/Navbar";
 import ArchivedList from "@/components/admin/ArchivedList";
@@ -9,9 +7,7 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 export default async function ArchivedPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/auth/signin");
-  if (session.user.role !== "admin") redirect("/dashboard");
+  await requireAdmin();
 
   const submissions = await listSubmissions({
     includeDeleted: true,

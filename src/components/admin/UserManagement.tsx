@@ -12,16 +12,12 @@ import { Badge } from "@/components/arc/badge/badge";
 import { Avatar } from "@/components/arc/avatar/avatar";
 import { Button } from "@/components/arc/button/button";
 import { formatDate } from "@/lib/utils";
+import { useCurrentUser } from "@/hooks/use-session";
 import type { AdminUserRow } from "@/db/users";
 
-export default function UserManagement({
-  users,
-  currentUserId,
-}: {
-  users: AdminUserRow[];
-  currentUserId: string;
-}) {
+export default function UserManagement({ users }: { users: AdminUserRow[] }) {
   const { toast } = useToastStack();
+  const currentUserId = useCurrentUser()?.id;
   const [rows, setRows] = useState<AdminUserRow[]>(users);
   const [query, setQuery] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);

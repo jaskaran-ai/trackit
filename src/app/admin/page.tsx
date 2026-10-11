@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/session";
 import Navbar from "@/components/shared/Navbar";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AdminStatsSection from "@/components/admin/AdminStatsSection";
@@ -8,15 +6,14 @@ import AdminSubmissionsSection from "@/components/admin/AdminSubmissionsSection"
 import AdminUsersSection from "@/components/admin/AdminUsersSection";
 
 /**
- * Only the auth check runs on the server. The shell is sent right away, and each
- * section fetches its own data through the shared TanStack cache. Awaiting the
- * data here would hold the whole route behind the slowest query, and the client
- * cache could not skip that wait, because the route itself is never cached.
+ * The auth check is the only work here, and requireAdmin() does it against the
+ * database. The shell is sent right away, and each section fetches its own data
+ * through the shared TanStack cache. Awaiting the data here would hold the
+ * whole route behind the slowest query, and the client cache could not skip
+ * that wait, because the route itself is never cached.
  */
 export default async function AdminPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/auth/signin");
-  if (session.user.role !== "admin") redirect("/dashboard");
+  await requireAdmin();
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,7 +24,7 @@ export default async function AdminPage() {
         <AdminStatsSection />
         <AdminSubmissionsSection />
         <div className="mt-8">
-          <AdminUsersSection currentUserId={session.user.id} />
+          <AdminUsersSection />
         </div>
       </main>
     </div>
