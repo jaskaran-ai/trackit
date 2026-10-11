@@ -4,7 +4,8 @@ import { headers } from "next/headers";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { getSubmissionById } from "@/db/submissions";
 import { listComments } from "@/db/comments";
-import { listHistory } from "@/db/history";
+import { listHistoryPage } from "@/db/history";
+import { HISTORY_PAGE_SIZE } from "@/lib/history-paging";
 import { getVoteSummary } from "@/db/votes";
 import { getQueryClient, queryKeys } from "@/lib/query-client";
 import Navbar from "@/components/shared/Navbar";
@@ -36,7 +37,7 @@ export default async function SubmissionDetailPage({
 
   const [comments, history, vote] = await Promise.all([
     listComments(id),
-    listHistory(id),
+    listHistoryPage(id, { limit: HISTORY_PAGE_SIZE, after: null }),
     submission.type === "FEATURE"
       ? getVoteSummary(id, session.user.id)
       : Promise.resolve(null),
@@ -44,7 +45,7 @@ export default async function SubmissionDetailPage({
 
   const queryClient = getQueryClient();
   queryClient.setQueryData(queryKeys.comments(id), comments);
-  queryClient.setQueryData(queryKeys.history(id), history);
+  queryClient.setQueryData(queryKeys.history(id), { pages: [history], pageParams: [null] });
 
   return (
     <div className="min-h-screen bg-background">

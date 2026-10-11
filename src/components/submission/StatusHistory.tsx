@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { History } from "lucide-react";
 import { Timeline, type TimelineEvent } from "@/components/arc/timeline/timeline";
+import { Button } from "@/components/arc/button/button";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { formatDate } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/labels";
@@ -97,14 +98,32 @@ function Detail({ entry }: { entry: HistoryEntry }) {
  */
 export default function StatusHistory({ submissionId }: { submissionId: string }) {
   const historyQuery = useSubmissionHistory(submissionId);
-  const entries = historyQuery.data;
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = historyQuery;
+  const entries = historyQuery.data?.pages.flatMap((page) => page.items);
   const [now, setNow] = useState<number | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS);
     return () => clearInterval(timer);
   }, []);
+
+  // Fetch the next page once the sentinel below the timeline scrolls into view.
+  // Re-created after each fetch, so a short page keeps loading until it fills the viewport.
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) void fetchNextPage();
+      },
+      { rootMargin: "200px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const events: TimelineEvent[] = (entries ?? []).map((entry) => ({
     id: entry.id,
@@ -128,7 +147,25 @@ export default function StatusHistory({ submissionId }: { submissionId: string }
       ) : events.length === 0 ? (
         <p className="text-sm text-muted">No changes recorded yet.</p>
       ) : (
-        <Timeline label="Change history" events={events} now={now} />
+        <>
+          <Timeline label="Change history" events={events} now={now} />
+          <div ref={sentinelRef} aria-hidden className="h-px" />
+          {hasNextPage && (
+            <div className="mt-3 flex justify-center">
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={isFetchingNextPage}
+                onClick={() => void fetchNextPage()}
+              >
+                Load more
+              </Button>
+            </div>
+          )}
+          <span role="status" className="sr-only">
+            {isFetchingNextPage ? "Loading more history" : ""}
+          </span>
+        </>
       )}
     </section>
   );
