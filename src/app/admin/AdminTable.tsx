@@ -13,6 +13,7 @@ import { Select } from "@/components/arc/select/select";
 import { Button } from "@/components/arc/button/button";
 import { useToastStack } from "@/components/arc/toast-stack/toast-stack";
 import { Avatar } from "@/components/arc/avatar/avatar";
+import { AvatarGroup } from "@/components/arc/avatar-group/avatar-group";
 import {
   StatusBadge,
   TypeBadge,
@@ -285,6 +286,27 @@ export default function AdminTable({ submissions }: { submissions: TableRow[] })
           </span>
         </span>
       ),
+    },
+    {
+      key: "assignees",
+      label: "Assignees",
+      render: (_value, row) => {
+        const people = row.assignees ?? [];
+        if (people.length === 0) {
+          return <span className="text-sm text-muted">Unassigned</span>;
+        }
+        return (
+          <AvatarGroup
+            size="sm"
+            max={3}
+            label="Assignees"
+            members={people.map((person) => ({
+              name: person.name,
+              src: person.image ?? undefined,
+            }))}
+          />
+        );
+      },
     },
     {
       key: "actions",
