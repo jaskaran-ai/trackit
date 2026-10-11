@@ -1,7 +1,6 @@
 import Image from "next/image";
-import { redirect, notFound } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { notFound } from "next/navigation";
+import { requireAdmin } from "@/lib/session";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { getSubmissionById } from "@/db/submissions";
 import { listComments } from "@/db/comments";
@@ -36,9 +35,9 @@ export default async function AdminSubmissionDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/auth/signin");
-  if (session.user.role !== "admin") redirect("/dashboard");
+  // Admin-only surface: requireAdmin() has already proven the role against
+  // the database, so every control below may assume it.
+  const admin = await requireAdmin();
 
   const { id } = await params;
   const submission = await getSubmissionById(id);
@@ -49,7 +48,7 @@ export default async function AdminSubmissionDetailPage({
     listComments(id),
     listHistoryPage(id, { limit: HISTORY_PAGE_SIZE, after: null }),
     submission.type === "FEATURE"
-      ? getVoteSummary(id, session.user.id)
+      ? getVoteSummary(id, admin.id)
       : Promise.resolve(null),
     listAssigneesBySubmission([id]),
   ]);
@@ -162,13 +161,7 @@ export default async function AdminSubmissionDetailPage({
 
           <HydrationBoundary state={state}>
             <StatusHistory submissionId={submission.id} />
-            <CommentsSection
-              submissionId={submission.id}
-              currentUserId={session.user.id}
-              currentUserName={session.user.name}
-              currentUserImage={session.user.image}
-              isAdmin
-            />
+            <CommentsSection submissionId={submission.id} />
           </HydrationBoundary>
 
           {/* Attachments */}

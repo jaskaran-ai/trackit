@@ -10,6 +10,7 @@ import {
 } from "@/components/arc/comment-thread/comment-thread";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
 import { COMMENT_REACTION_EMOJI } from "@/lib/comment-reactions";
+import { useCurrentUser, useIsAdmin } from "@/hooks/use-session";
 import {
   useComments,
   useCreateComment,
@@ -68,24 +69,18 @@ function buildThreadTree(comments: CommentWithUser[]): ThreadComment[] {
  * maps its events onto persisted mutations and rebuilds the tree from the flat
  * API list (parentId + reactions).
  */
-export default function CommentsSection({
-  submissionId,
-  currentUserId,
-  currentUserName,
-  currentUserImage,
-  isAdmin = false,
-}: {
-  submissionId: string;
-  currentUserId?: string;
-  currentUserName?: string | null;
-  currentUserImage?: string | null;
-  isAdmin?: boolean;
-}) {
+export default function CommentsSection({ submissionId }: { submissionId: string }) {
   const { toast } = useToastStack();
+  const user = useCurrentUser();
+  const isAdmin = useIsAdmin();
   const commentsQuery = useComments(submissionId);
   const postComment = useCreateComment(submissionId);
   const removeComment = useDeleteComment(submissionId);
   const toggleReaction = useToggleCommentReaction(submissionId);
+
+  const currentUserId = user?.id;
+  const currentUserName = user?.name;
+  const currentUserImage = user?.image ?? null;
 
   const comments = commentsQuery.data;
 

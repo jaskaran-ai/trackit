@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { redirect, notFound } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireUser } from "@/lib/session";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { getSubmissionById } from "@/db/submissions";
 import { listComments } from "@/db/comments";
@@ -24,23 +23,22 @@ export default async function SubmissionDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/auth/signin");
+  const user = await requireUser();
 
   const { id } = await params;
   const submission = await getSubmissionById(id);
 
   if (!submission) notFound();
 
-  const isAdmin = session.user.role === "admin";
-  const isOwner = submission.userId === session.user.id;
+  const isAdmin = user.role === "admin";
+  const isOwner = submission.userId === user.id;
   if (!isAdmin && !isOwner) redirect("/dashboard");
 
   const [comments, history, vote] = await Promise.all([
     listComments(id),
     listHistoryPage(id, { limit: HISTORY_PAGE_SIZE, after: null }),
     submission.type === "FEATURE"
-      ? getVoteSummary(id, session.user.id)
+      ? getVoteSummary(id, user.id)
       : Promise.resolve(null),
   ]);
 
@@ -133,13 +131,7 @@ export default async function SubmissionDetailPage({
 
             <StatusHistory submissionId={submission.id} />
 
-            <CommentsSection
-              submissionId={submission.id}
-              currentUserId={session.user.id}
-              currentUserName={session.user.name}
-              currentUserImage={session.user.image}
-              isAdmin={isAdmin}
-            />
+            <CommentsSection submissionId={submission.id} />
           </div>
         </HydrationBoundary>
       </main>
