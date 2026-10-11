@@ -4,6 +4,9 @@ import type { Lazyable, Procedure } from "@orpc/server";
 import { createORPCContext, statusForErrorCode } from "./context";
 import type { ORPCContext, RestErrorCode } from "./context";
 
+// oRPC procedures are invariant in their generics, so `unknown` rejects every
+// concrete router procedure. `any` is the only type that accepts them all here.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyProcedure = Lazyable<Procedure<ORPCContext, any, any, any, any, any>>;
 
 /**

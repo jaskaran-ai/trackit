@@ -97,6 +97,9 @@ export default function Navbar() {
                 signOut({
                   fetchOptions: {
                     onSuccess: () => {
+                      // A full load, not router.push: it drops the TanStack cache
+                      // and every per-user query along with the session.
+                      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- intentional hard reload on sign-out
                       window.location.href = "/auth/signin";
                     },
                   },

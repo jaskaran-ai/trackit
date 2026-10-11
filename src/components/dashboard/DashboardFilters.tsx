@@ -141,9 +141,6 @@ export default function DashboardFilters({
     return value ? [{ id: field.id, label: field.label, value: field.read(value) }] : [];
   });
 
-  const isFiltered =
-    filters.search.trim() !== "" || activeChips.length > 0;
-
   return (
     <>
       <div className="mb-3 rounded-panel border border-border bg-surface p-3 sm:p-3.5">
